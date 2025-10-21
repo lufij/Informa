@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
+  "outputDirectory": "build",
   "framework": "vite",
   "rewrites": [
     { 
@@ -72,7 +72,7 @@
   ],
   "regions": ["iad1"],
   "functions": {
-    "src/supabase/functions/server/**/*.tsx": {
+    "api/**/*.tsx": {
       "memory": 1024,
       "maxDuration": 10
     }
