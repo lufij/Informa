@@ -1,6 +1,4 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
   "framework": "vite",
   "rewrites": [
     { 
@@ -72,7 +70,7 @@
   ],
   "regions": ["iad1"],
   "functions": {
-    "api/**/*.tsx": {
+    "api/**/*.ts": {
       "memory": 1024,
       "maxDuration": 10
     }
