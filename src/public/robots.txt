@@ -1,0 +1,13 @@
+# Informa - Gualán, Zacapa
+# Robots.txt
+
+User-agent: *
+Allow: /
+
+# Disallow admin and private routes
+Disallow: /admin
+Disallow: /api/
+Disallow: /settings
+
+# Sitemap
+Sitemap: https://informa-gualan.vercel.app/sitemap.xml
