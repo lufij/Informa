@@ -16,6 +16,9 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
   const [isInstalled, setIsInstalled] = useState(false)
 
   useEffect(() => {
+    // Only run in browser
+    if (typeof window === 'undefined') return
+
     // Detect iOS
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     setIsIOS(iOS)
@@ -43,7 +46,7 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
         setTimeout(() => setShowButton(true), 2000)
       }
     }
-  }, [deferredPrompt, isIOS])
+  }, [deferredPrompt])
 
   const handleDismiss = () => {
     setShowButton(false)
