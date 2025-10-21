@@ -19,6 +19,7 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt'
 import { PWANetworkStatus } from './components/PWANetworkStatus'
 import { PublicContentView } from './components/PublicContentView'
 import { InstallAppBanner } from './components/InstallAppBanner'
+import { FloatingInstallButton } from './components/FloatingInstallButton'
 import { Button } from './components/ui/button'
 import { Badge } from './components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
@@ -26,8 +27,9 @@ import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner@2.0.3'
 import { getSupabaseClient } from './utils/supabase/client'
 import { projectId, publicAnonKey } from './utils/supabase/info'
-import { Flame, Megaphone, ShoppingBag, MessageSquare, LogOut, Sparkles, TrendingUp, Eye, LogIn, UserPlus, Bell, Search, Mail, Bookmark, Rss, Shield, User } from 'lucide-react'
+import { Flame, Megaphone, ShoppingBag, MessageSquare, LogOut, Sparkles, TrendingUp, Eye, LogIn, UserPlus, Bell, Search, Mail, Bookmark, Rss, Shield, User, Menu } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './components/ui/dropdown-menu'
 import logoCircular from 'figma:asset/159f250301c9fc78337e0c8aa784431ded1c39c8.png'
 
 export default function App() {
@@ -305,162 +307,189 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50">
-      {/* Header */}
+      {/* Header - Mobile Optimized */}
       <header className="bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 sticky top-0 z-10 shadow-lg">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg p-1">
+        <div className="w-full px-3 sm:px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            {/* Logo and Title */}
+            <div className="flex items-center gap-2 min-w-0 flex-shrink">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-lg p-1 flex-shrink-0">
                 <img 
                   src={logoCircular} 
                   alt="Informa Logo" 
                   className="w-full h-full object-contain"
                 />
               </div>
-              <div>
-                <h1 className="text-white text-xl flex items-center gap-2">
-                  <span>Informa</span>
-                  <Sparkles className="w-4 h-4" />
+              <div className="min-w-0">
+                <h1 className="text-white text-base sm:text-xl flex items-center gap-1 sm:gap-2">
+                  <span className="truncate">Informa</span>
+                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                 </h1>
-                <p className="text-xs text-white/90 flex items-center gap-1">
+                <p className="text-xs text-white/90 hidden sm:flex items-center gap-1">
                   <TrendingUp className="w-3 h-3" />
                   Lo que está pasando ahora
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Search Button - Always visible */}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowSearch(true)}
-                className="text-white hover:bg-white/20 h-9 w-9 p-0"
-                title="Buscar"
-              >
-                <Search className="w-5 h-5" />
-              </Button>
 
+            {/* Action Buttons */}
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {isAuthenticated ? (
                 <>
-                  {/* Trending Button */}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setShowTrending(true)}
-                    className="text-white hover:bg-white/20 h-9 w-9 p-0"
-                    title="Trending"
-                  >
-                    <TrendingUp className="w-5 h-5" />
-                  </Button>
+                  {/* Mobile: Compact Menu Dropdown */}
+                  <div className="md:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-white hover:bg-white/20 h-9 w-9 p-0"
+                        >
+                          <Menu className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => setShowSearch(true)}>
+                          <Search className="w-4 h-4 mr-2" />
+                          Buscar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowTrending(true)}>
+                          <TrendingUp className="w-4 h-4 mr-2" />
+                          Trending
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowSaved(true)}>
+                          <Bookmark className="w-4 h-4 mr-2" />
+                          Guardados
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowMessages(true)}>
+                          <Mail className="w-4 h-4 mr-2" />
+                          Mensajes
+                        </DropdownMenuItem>
+                        {userProfile?.role === 'admin' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setShowAdminReports(true)}>
+                              <Shield className="w-4 h-4 mr-2" />
+                              Admin
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
 
-                  {/* Saved Posts Button */}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setShowSaved(true)}
-                    className="text-white hover:bg-white/20 h-9 w-9 p-0"
-                    title="Guardados"
-                  >
-                    <Bookmark className="w-5 h-5" />
-                  </Button>
+                  {/* Desktop: Full Buttons */}
+                  <div className="hidden md:flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setShowSearch(true)}
+                      className="text-white hover:bg-white/20 h-9 w-9 p-0"
+                      title="Buscar"
+                    >
+                      <Search className="w-5 h-5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setShowTrending(true)}
+                      className="text-white hover:bg-white/20 h-9 w-9 p-0"
+                      title="Trending"
+                    >
+                      <TrendingUp className="w-5 h-5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setShowSaved(true)}
+                      className="text-white hover:bg-white/20 h-9 w-9 p-0"
+                      title="Guardados"
+                    >
+                      <Bookmark className="w-5 h-5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setShowMessages(true)}
+                      className="text-white hover:bg-white/20 h-9 w-9 p-0"
+                      title="Mensajes"
+                    >
+                      <Mail className="w-5 h-5" />
+                    </Button>
+                    {userProfile?.role === 'admin' && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setShowAdminReports(true)}
+                        className="text-white hover:bg-white/20 h-9 px-3"
+                        title="Reportes"
+                      >
+                        <Shield className="w-4 h-4 mr-2" />
+                        Admin
+                      </Button>
+                    )}
+                  </div>
 
-                  {/* Messages Button */}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setShowMessages(true)}
-                    className="text-white hover:bg-white/20 h-9 w-9 p-0 relative"
-                    title="Mensajes"
-                  >
-                    <Mail className="w-5 h-5" />
-                  </Button>
-
-                  {/* Notifications Button */}
+                  {/* Notifications - Always visible */}
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => setShowNotifications(true)}
-                    className="text-white hover:bg-white/20 h-9 w-9 p-0 relative"
+                    className="text-white hover:bg-white/20 h-9 w-9 p-0 relative flex-shrink-0"
                     title="Notificaciones"
                   >
                     <Bell className="w-5 h-5" />
                     {unreadNotifications > 0 && (
-                      <Badge className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 bg-red-500 text-white text-xs">
+                      <Badge className="absolute -top-1 -right-1 h-4 min-w-[16px] flex items-center justify-center px-1 bg-red-500 text-white text-[10px]">
                         {unreadNotifications > 9 ? '9+' : unreadNotifications}
                       </Badge>
                     )}
                   </Button>
 
-                  <div className="h-6 w-px bg-white/30 mx-1" />
-
-                  {/* Admin Reports Button (only for admins) */}
-                  {userProfile?.role === 'admin' && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setShowAdminReports(true)}
-                      className="text-white hover:bg-white/20 h-9 w-9 p-0 sm:w-auto sm:px-3"
-                      title="Reportes"
-                    >
-                      <Shield className="w-4 h-4" />
-                      <span className="ml-2 hidden sm:inline">Admin</span>
-                    </Button>
-                  )}
-
-                  {/* Firefighter Badge (only for firefighters) */}
+                  {/* Firefighter Badge */}
                   {userProfile?.role === 'firefighter' && (
-                    <Badge className="bg-red-600 hover:bg-red-700 text-white h-9 px-3 border-0 animate-pulse">
-                      <span className="text-base mr-1">🚒</span>
-                      <span className="hidden sm:inline">Bombero</span>
+                    <Badge className="bg-red-600 text-white h-8 px-2 border-0 animate-pulse hidden sm:flex">
+                      <span className="text-sm">🚒</span>
                     </Badge>
                   )}
 
-                  {/* User Profile Section */}
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-px bg-white/30 hidden sm:block" />
-                    
-                    {/* Profile Button with Avatar and Name */}
-                    <button
-                      onClick={() => setShowSettings(true)}
-                      className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white/20 transition-all group"
-                      title="Mi Perfil"
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <UserAvatar
-                          userId={userProfile.id}
-                          userName={userProfile.name}
-                          profilePhoto={userProfile.profile_photo}
-                          size="sm"
-                        />
-                        <span className="text-white text-xs max-w-[80px] truncate group-hover:text-yellow-200 transition-colors">
-                          {userProfile.name.split(' ')[0]}
-                        </span>
-                      </div>
-                    </button>
+                  {/* User Avatar - Compact */}
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="flex items-center gap-1 rounded-lg hover:bg-white/20 transition-all p-1 flex-shrink-0"
+                    title="Mi Perfil"
+                  >
+                    <UserAvatar
+                      userId={userProfile.id}
+                      userName={userProfile.name}
+                      profilePhoto={userProfile.profile_photo}
+                      size="sm"
+                    />
+                  </button>
 
-                    {/* Logout Button */}
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handleLogout}
-                      className="text-white hover:bg-white/20 h-9 w-9 p-0"
-                      title="Salir"
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  {/* Logout - Desktop only */}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleLogout}
+                    className="text-white hover:bg-white/20 h-9 w-9 p-0 hidden sm:flex flex-shrink-0"
+                    title="Salir"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
                 </>
               ) : (
                 <>
+                  {/* Guest buttons - compact on mobile */}
                   <Button 
                     size="sm" 
                     onClick={() => {
                       setAuthMode('login')
                       setShowAuthDialog(true)
                     }}
-                    className="bg-white text-pink-600 hover:bg-white/90"
+                    className="bg-white text-pink-600 hover:bg-white/90 h-9 px-3"
                   >
-                    <LogIn className="w-4 h-4 mr-2" />
+                    <LogIn className="w-4 h-4 sm:mr-2" />
                     <span className="hidden sm:inline">Ingresar</span>
                   </Button>
                   <Button 
@@ -469,9 +498,9 @@ export default function App() {
                       setAuthMode('signup')
                       setShowAuthDialog(true)
                     }}
-                    className="bg-purple-600 text-white hover:bg-purple-700"
+                    className="bg-purple-600 text-white hover:bg-purple-700 h-9 px-3"
                   >
-                    <UserPlus className="w-4 h-4 mr-2" />
+                    <UserPlus className="w-4 h-4 sm:mr-2" />
                     <span className="hidden sm:inline">Registrarse</span>
                   </Button>
                 </>
@@ -482,7 +511,7 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
+      <main className="w-full px-3 sm:px-4 py-4 sm:py-6 max-w-4xl mx-auto">
         {/* Show Public Content View if deep link exists and user is not authenticated */}
         {deepLinkView && deepLinkId && !isAuthenticated ? (
           <PublicContentView
@@ -493,26 +522,26 @@ export default function App() {
           />
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full grid grid-cols-5 mb-6 h-auto bg-white/80 backdrop-blur-sm shadow-md">
-            <TabsTrigger value="feed" className="flex items-center justify-center data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-xs sm:text-sm">
-              <Rss className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Feed</span>
+          <TabsList className="w-full grid grid-cols-5 mb-4 sm:mb-6 h-auto bg-white/80 backdrop-blur-sm shadow-md overflow-x-auto">
+            <TabsTrigger value="feed" className="flex flex-col sm:flex-row items-center justify-center gap-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-1 min-w-0">
+              <Rss className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">Feed</span>
             </TabsTrigger>
-            <TabsTrigger value="news" className="flex items-center justify-center data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-orange-500 data-[state=active]:text-white text-xs sm:text-sm">
-              <span>🔥</span>
-              <span className="hidden sm:inline ml-1">Noticias</span>
+            <TabsTrigger value="news" className="flex flex-col sm:flex-row items-center justify-center gap-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-orange-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-1 min-w-0">
+              <span className="text-base flex-shrink-0">🔥</span>
+              <span className="hidden sm:inline truncate">Noticias</span>
             </TabsTrigger>
-            <TabsTrigger value="alerts" className="flex items-center justify-center data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-xs sm:text-sm">
-              <span>📢</span>
-              <span className="hidden sm:inline ml-1">Alertas</span>
+            <TabsTrigger value="alerts" className="flex flex-col sm:flex-row items-center justify-center gap-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-1 min-w-0">
+              <span className="text-base flex-shrink-0">📢</span>
+              <span className="hidden sm:inline truncate">Alertas</span>
             </TabsTrigger>
-            <TabsTrigger value="classifieds" className="flex items-center justify-center data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white text-xs sm:text-sm">
-              <span>💼</span>
-              <span className="hidden sm:inline ml-1">Clasificados</span>
+            <TabsTrigger value="classifieds" className="flex flex-col sm:flex-row items-center justify-center gap-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-1 min-w-0">
+              <span className="text-base flex-shrink-0">💼</span>
+              <span className="hidden sm:inline truncate">Clasif.</span>
             </TabsTrigger>
-            <TabsTrigger value="forums" className="flex items-center justify-center data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white text-xs sm:text-sm">
-              <span>💬</span>
-              <span className="hidden sm:inline ml-1">Foros</span>
+            <TabsTrigger value="forums" className="flex flex-col sm:flex-row items-center justify-center gap-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-1 min-w-0">
+              <span className="text-base flex-shrink-0">💬</span>
+              <span className="hidden sm:inline truncate">Foros</span>
             </TabsTrigger>
           </TabsList>
 
@@ -740,6 +769,12 @@ export default function App() {
       {/* PWA Components */}
       <PWAInstallPrompt />
       <PWANetworkStatus />
+      
+      {/* Floating Install Button - Always visible when not installed */}
+      <FloatingInstallButton
+        deferredPrompt={deferredPrompt}
+        onInstall={handleInstallPWA}
+      />
       
       {/* Install App Banner for Deep Links */}
       {deepLinkView && deepLinkId && !isAuthenticated && (
