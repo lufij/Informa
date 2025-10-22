@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
-import { X, ZoomIn, ZoomOut, Download } from 'lucide-react'
-import { useState } from 'react'
+import { X, ZoomIn, ZoomOut, RotateCw } from 'lucide-react'
+import { useState, useRef, useEffect, TouchEvent } from 'react'
 
 interface ImageViewerProps {
   imageUrl: string | null
@@ -11,46 +11,135 @@ interface ImageViewerProps {
 
 export function ImageViewer({ imageUrl, onClose, altText = 'Imagen' }: ImageViewerProps) {
   const [zoom, setZoom] = useState(1)
+  const [rotation, setRotation] = useState(0)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  
+  const imageRef = useRef<HTMLImageElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  
+  // Pinch to zoom
+  const [lastTouchDistance, setLastTouchDistance] = useState(0)
 
-  const handleDownload = () => {
-    if (!imageUrl) return
-    
-    const link = document.createElement('a')
-    link.href = imageUrl
-    link.download = `informa-${Date.now()}.jpg`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
+  // Reset on image change
+  useEffect(() => {
+    setZoom(1)
+    setRotation(0)
+    setPosition({ x: 0, y: 0 })
+  }, [imageUrl])
 
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.5, 3))
+    setZoom(prev => Math.min(prev + 0.5, 5))
   }
 
   const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 0.5, 0.5))
+    setZoom(prev => Math.max(prev - 0.5, 1))
+  }
+
+  const handleRotate = () => {
+    setRotation(prev => (prev + 90) % 360)
+  }
+
+  const handleReset = () => {
+    setZoom(1)
+    setRotation(0)
+    setPosition({ x: 0, y: 0 })
+  }
+
+  // Mouse drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoom > 1) {
+      setIsDragging(true)
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+    }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && zoom > 1) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      })
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  // Touch handlers for pinch zoom
+  const getTouchDistance = (touches: React.TouchList) => {
+    const dx = touches[0].clientX - touches[1].clientX
+    const dy = touches[0].clientY - touches[1].clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      setLastTouchDistance(getTouchDistance(e.touches))
+    } else if (e.touches.length === 1 && zoom > 1) {
+      setIsDragging(true)
+      setDragStart({ 
+        x: e.touches[0].clientX - position.x, 
+        y: e.touches[0].clientY - position.y 
+      })
+    }
+  }
+
+  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      const currentDistance = getTouchDistance(e.touches)
+      if (lastTouchDistance > 0) {
+        const delta = currentDistance - lastTouchDistance
+        const zoomDelta = delta * 0.01
+        setZoom(prev => Math.min(Math.max(prev + zoomDelta, 1), 5))
+      }
+      setLastTouchDistance(currentDistance)
+    } else if (e.touches.length === 1 && isDragging && zoom > 1) {
+      setPosition({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y
+      })
+    }
+  }
+
+  const handleTouchEnd = () => {
+    setIsDragging(false)
+    setLastTouchDistance(0)
+  }
+
+  // Prevent context menu and image saving
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    return false
+  }
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.preventDefault()
+    return false
   }
 
   return (
-    <Dialog open={!!imageUrl} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!imageUrl} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent 
-        className="max-w-[95vw] max-h-[95vh] w-auto h-auto p-0 bg-black/95 border-0 overflow-hidden"
+        className="max-w-[100vw] max-h-[100vh] w-full h-full p-0 bg-black border-0 overflow-hidden"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Visor de imagen</DialogTitle>
           <DialogDescription>
-            Imagen ampliada para ver en detalle
+            Imagen ampliada - Usa gestos para hacer zoom
           </DialogDescription>
         </DialogHeader>
         
         {/* Control buttons */}
-        <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+        <div className="absolute top-2 right-2 z-50 flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleZoomOut}
-            disabled={zoom <= 0.5}
-            className="bg-white/10 hover:bg-white/20 text-white rounded-full w-10 h-10 p-0 backdrop-blur-sm"
+            disabled={zoom <= 1}
+            className="bg-black/60 hover:bg-black/80 text-white rounded-full w-10 h-10 p-0 backdrop-blur-sm touch-manipulation"
             title="Alejar"
           >
             <ZoomOut className="w-5 h-5" />
@@ -59,8 +148,8 @@ export function ImageViewer({ imageUrl, onClose, altText = 'Imagen' }: ImageView
             variant="ghost"
             size="sm"
             onClick={handleZoomIn}
-            disabled={zoom >= 3}
-            className="bg-white/10 hover:bg-white/20 text-white rounded-full w-10 h-10 p-0 backdrop-blur-sm"
+            disabled={zoom >= 5}
+            className="bg-black/60 hover:bg-black/80 text-white rounded-full w-10 h-10 p-0 backdrop-blur-sm touch-manipulation"
             title="Acercar"
           >
             <ZoomIn className="w-5 h-5" />
@@ -68,17 +157,17 @@ export function ImageViewer({ imageUrl, onClose, altText = 'Imagen' }: ImageView
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleDownload}
-            className="bg-white/10 hover:bg-white/20 text-white rounded-full w-10 h-10 p-0 backdrop-blur-sm"
-            title="Descargar"
+            onClick={handleRotate}
+            className="bg-black/60 hover:bg-black/80 text-white rounded-full w-10 h-10 p-0 backdrop-blur-sm touch-manipulation"
+            title="Rotar"
           >
-            <Download className="w-5 h-5" />
+            <RotateCw className="w-5 h-5" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="bg-white/10 hover:bg-white/20 text-white rounded-full w-10 h-10 p-0 backdrop-blur-sm"
+            className="bg-black/60 hover:bg-black/80 text-white rounded-full w-10 h-10 p-0 backdrop-blur-sm touch-manipulation"
             title="Cerrar"
           >
             <X className="w-5 h-5" />
@@ -86,29 +175,62 @@ export function ImageViewer({ imageUrl, onClose, altText = 'Imagen' }: ImageView
         </div>
 
         {/* Zoom indicator */}
-        <div className="absolute top-4 left-4 z-50 bg-white/10 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm">
+        <div className="absolute top-2 left-2 z-50 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
           {Math.round(zoom * 100)}%
         </div>
 
+        {/* Reset button (only show when zoomed or rotated) */}
+        {(zoom > 1 || rotation !== 0) && (
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-50">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="bg-black/60 hover:bg-black/80 text-white px-4 py-2 rounded-full backdrop-blur-sm touch-manipulation"
+            >
+              Restablecer
+            </Button>
+          </div>
+        )}
+
         {/* Image container */}
-        <div className="relative w-full h-full flex items-center justify-center p-8 overflow-auto">
+        <div 
+          ref={containerRef}
+          className="relative w-full h-full flex items-center justify-center overflow-hidden touch-none select-none"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+        >
           {imageUrl && (
             <img
+              ref={imageRef}
               src={imageUrl}
               alt={altText}
-              className="max-w-full max-h-full object-contain transition-transform duration-300 cursor-zoom-in"
+              className="max-w-full max-h-full object-contain transition-transform duration-200 pointer-events-none select-none"
               style={{
-                transform: `scale(${zoom})`,
-                transformOrigin: 'center center'
+                transform: `scale(${zoom}) rotate(${rotation}deg) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
+                transformOrigin: 'center center',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                MozUserSelect: 'none',
+                msUserSelect: 'none',
+                WebkitTouchCallout: 'none'
               }}
-              onClick={handleZoomIn}
+              onContextMenu={handleContextMenu}
+              onDragStart={handleDragStart}
+              draggable={false}
             />
           )}
         </div>
 
         {/* Instructions */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/10 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm">
-          Click en la imagen para acercar • ESC para cerrar
+        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs max-w-[200px]">
+          {zoom > 1 ? '🖐️ Arrastra para mover' : '🤏 Pellizca para hacer zoom'}
         </div>
       </DialogContent>
     </Dialog>

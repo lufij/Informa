@@ -629,7 +629,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                 Nueva Alerta
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-orange-600" />
@@ -639,7 +639,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                   Comparte información importante con tu comunidad
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreateAlert} className="space-y-4">
+              <form onSubmit={handleCreateAlert} className="space-y-4 pb-4">
                 {/* Tipo de alerta con botones grandes y visuales */}
                 <div className="space-y-2">
                   <Label>Tipo de alerta</Label>

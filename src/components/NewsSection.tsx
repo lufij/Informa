@@ -501,7 +501,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
                   Cuenta tu Noticia
                 </Button>
               </DialogTrigger>
-          <DialogContent className="max-w-md bg-gradient-to-br from-pink-50 to-purple-50">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-pink-50 to-purple-50">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-2xl">
                 🔥 ¡Cuenta tu Noticia!
@@ -510,7 +510,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
                 ¿Qué está pasando en tu comunidad? ¡Cuéntanos todo!
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateNews} className="space-y-4">
+            <form onSubmit={handleCreateNews} className="space-y-4 pb-4">
               {/* Tipo de noticia con botones visuales */}
               <div className="space-y-2">
                 <Label>¿De qué tipo es tu noticia?</Label>
