@@ -1153,7 +1153,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
                   className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  O subir desde archivos
+                  O elegir desde galería/cámara
                 </Button>
               </>
             )}
@@ -1163,12 +1163,13 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
                 <div className="border-2 border-dashed border-purple-300 rounded-lg p-6 text-center bg-white/50">
                   <Upload className="w-8 h-8 text-purple-500 mx-auto mb-2" />
                   <p className="text-sm text-gray-700 mb-3">
-                    Selecciona una foto de tu galería
+                    Selecciona desde tu galería o toma una foto
                   </p>
                   <Input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
+                    capture="environment"
                     onChange={handleFileSelect}
                     className="max-w-full"
                   />

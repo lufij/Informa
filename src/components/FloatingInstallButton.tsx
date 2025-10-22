@@ -56,16 +56,12 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
 
   const handleClick = async () => {
     if (isIOS) {
+      // iOS - show manual instructions
       setShowInstructions(true)
     } else {
-      // Android - try to install
-      if (deferredPrompt) {
-        await onInstall()
-        setShowButton(false)
-      } else {
-        // No prompt available - show manual instructions
-        setShowInstructions(true)
-      }
+      // Android - always try automatic installation
+      await onInstall()
+      setShowButton(false)
     }
   }
 

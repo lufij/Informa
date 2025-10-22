@@ -92,10 +92,80 @@ export default function App() {
     }
     window.addEventListener('beforeinstallprompt', handleBeforeInstall)
     
+    // Request notification permissions when app starts
+    requestNotificationPermission()
+    
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
     }
   }, [])
+  
+  // Request notification permissions
+  const requestNotificationPermission = async () => {
+    // Only request if notifications are supported
+    if (!('Notification' in window)) {
+      console.log('Este navegador no soporta notificaciones')
+      return
+    }
+    
+    // Check current permission
+    if (Notification.permission === 'granted') {
+      console.log('Permisos de notificación ya concedidos')
+      return
+    }
+    
+    // Don't ask immediately on first load - wait for user to be authenticated
+    // This will be called again when user logs in
+    if (Notification.permission === 'default' && isAuthenticated) {
+      try {
+        const permission = await Notification.requestPermission()
+        if (permission === 'granted') {
+          console.log('Permisos de notificación concedidos')
+          // Subscribe to push notifications
+          await subscribeToPushNotifications()
+        }
+      } catch (error) {
+        console.error('Error solicitando permisos de notificación:', error)
+      }
+    }
+  }
+  
+  // Subscribe to push notifications
+  const subscribeToPushNotifications = async () => {
+    try {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        const registration = await navigator.serviceWorker.ready
+        
+        // Check if already subscribed
+        const existingSubscription = await registration.pushManager.getSubscription()
+        if (existingSubscription) {
+          console.log('Ya suscrito a notificaciones push')
+          return
+        }
+        
+        // Subscribe to push notifications
+        // Note: You'll need to add your VAPID public key here
+        // const subscription = await registration.pushManager.subscribe({
+        //   userVisibleOnly: true,
+        //   applicationServerKey: 'YOUR_VAPID_PUBLIC_KEY'
+        // })
+        
+        // Send subscription to your server
+        // await fetch(`https://${projectId}.supabase.co/functions/v1/push-subscribe`, {
+        //   method: 'POST',
+        //   headers: {
+        //     'Authorization': `Bearer ${token}`,
+        //     'Content-Type': 'application/json'
+        //   },
+        //   body: JSON.stringify(subscription)
+        // })
+        
+        console.log('Push notifications configuradas (implementación pendiente)')
+      }
+    } catch (error) {
+      console.error('Error suscribiendo a push notifications:', error)
+    }
+  }
   
   // Handle deep link navigation when user is already authenticated
   useEffect(() => {
@@ -119,6 +189,8 @@ export default function App() {
   }, [isAuthenticated, deepLinkView, deepLinkId])
   
   const handleInstallPWA = async () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    
     if (deferredPrompt) {
       try {
         // Show the install prompt
@@ -133,7 +205,7 @@ export default function App() {
           })
         } else {
           toast.info('Instalación cancelada', {
-            description: 'Puedes instalar la app en cualquier momento desde el menú del navegador'
+            description: 'El botón seguirá disponible si cambias de opinión'
           })
         }
         
@@ -142,26 +214,23 @@ export default function App() {
         setShowInstallBanner(false)
       } catch (error) {
         console.error('Error al instalar PWA:', error)
-        toast.error('No se pudo instalar', {
-          description: 'Intenta desde el menú de Chrome: Más opciones > Instalar app'
-        })
+        // En Android, si falla, no mostrar nada (silent fail)
+        if (isIOS) {
+          toast.info('Instrucciones para iOS', {
+            description: 'En Safari: toca Compartir > Añadir a pantalla de inicio',
+            duration: 6000
+          })
+        }
       }
     } else {
-      // No prompt available - check if it's iOS or Android
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-      
+      // No prompt available - only show instructions for iOS
       if (isIOS) {
         toast.info('Instrucciones para iOS', {
           description: 'En Safari: toca Compartir > Añadir a pantalla de inicio',
           duration: 6000
         })
-      } else {
-        // Android but no prompt (might be already installed or criteria not met)
-        toast.info('Instalar desde el navegador', {
-          description: 'En Chrome: Menú (⋮) > Instalar aplicación',
-          duration: 6000
-        })
       }
+      // Para Android sin prompt, no hacer nada (silent)
     }
   }
   
@@ -326,6 +395,11 @@ export default function App() {
     setToken(accessToken)
     setUserProfile(profile)
     setIsAuthenticated(true)
+    
+    // Request notification permissions after successful login
+    setTimeout(() => {
+      requestNotificationPermission()
+    }, 2000)
     
     // Show welcome message based on context
     if (!deepLinkView) {
