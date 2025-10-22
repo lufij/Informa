@@ -788,8 +788,8 @@ app.put('/make-server-3467f1c6/alerts/:id', async (c) => {
       ...alert,
       description: description || alert.description,
       message: description || alert.message,
-      mediaFiles: mediaFiles || alert.mediaFiles || [],
-      mediaUrls: mediaUrls || alert.mediaUrls || [],
+      mediaFiles: mediaFiles !== undefined ? mediaFiles : (alert.mediaFiles || []),
+      mediaUrls: mediaUrls !== undefined ? mediaUrls : (alert.mediaUrls || []),
       updatedAt: new Date().toISOString()
     }
 

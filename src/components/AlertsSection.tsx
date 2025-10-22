@@ -461,6 +461,8 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
         setEditMediaFiles([])
         setEditMediaPreviews([])
         toast.success('¡Emergencia actualizada!')
+        // Refresh alerts to ensure we have the latest data
+        await fetchAlerts()
       } else {
         const error = await response.json()
         toast.error(error.error || 'Error al actualizar emergencia')

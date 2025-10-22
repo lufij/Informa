@@ -350,6 +350,7 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
         {
           method: 'DELETE',
           headers: {
+            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           }
         }
