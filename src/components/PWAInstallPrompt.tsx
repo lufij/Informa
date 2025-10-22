@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './ui/button'
 import { Card, CardContent } from './ui/card'
 import { X, Download, Share, ChevronUp } from 'lucide-react'
-import { toast } from 'sonner@2.0.3'
+import { toast } from 'sonner'
 
 export function PWAInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false)

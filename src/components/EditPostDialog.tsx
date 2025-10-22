@@ -6,7 +6,7 @@ import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Edit } from 'lucide-react'
 import { projectId } from '../utils/supabase/info'
-import { toast } from 'sonner@2.0.3'
+import { toast } from 'sonner'
 
 interface EditPostDialogProps {
   open: boolean

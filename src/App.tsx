@@ -24,13 +24,13 @@ import { Button } from './components/ui/button'
 import { Badge } from './components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
 import { Toaster } from './components/ui/sonner'
-import { toast } from 'sonner@2.0.3'
+import { toast } from 'sonner'
 import { getSupabaseClient } from './utils/supabase/client'
 import { projectId, publicAnonKey } from './utils/supabase/info'
 import { Flame, Megaphone, ShoppingBag, MessageSquare, LogOut, Sparkles, TrendingUp, Eye, LogIn, UserPlus, Bell, Search, Mail, Bookmark, Rss, Shield, User, Menu } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './components/ui/dropdown-menu'
-import logoCircular from 'figma:asset/159f250301c9fc78337e0c8aa784431ded1c39c8.png'
+const logoCircular = 'https://img.icons8.com/fluency/96/news.png'
 
 export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')

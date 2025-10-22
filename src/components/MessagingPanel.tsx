@@ -7,8 +7,8 @@ import { Badge } from './ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { MessageCircle, Send, ArrowLeft, Image as ImageIcon, X } from 'lucide-react'
 import { projectId, publicAnonKey } from '../utils/supabase/info'
-import { toast } from 'sonner@2.0.3'
-import { motion, AnimatePresence } from 'motion/react'
+import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
 import { UserAvatar } from './UserAvatar'
 
 interface Conversation {

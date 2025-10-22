@@ -6,8 +6,8 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { ScrollArea } from './ui/scroll-area'
 import { Flame, Megaphone, ShoppingBag, MessageSquare, Calendar, TrendingUp, Users, Clock, User, Eye, Heart } from 'lucide-react'
 import { projectId, publicAnonKey } from '../utils/supabase/info'
-import { toast } from 'sonner@2.0.3'
-import { motion, AnimatePresence } from 'motion/react'
+import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
 import { UserAvatar } from './UserAvatar'
 
 interface FeedItem {

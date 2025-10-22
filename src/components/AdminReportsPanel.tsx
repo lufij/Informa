@@ -7,8 +7,8 @@ import { ScrollArea } from './ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { AlertTriangle, Check, X, Eye, Shield } from 'lucide-react'
 import { projectId } from '../utils/supabase/info'
-import { toast } from 'sonner@2.0.3'
-import { motion, AnimatePresence } from 'motion/react'
+import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Report {
   id: string

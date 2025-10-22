@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
 import { Download, X, Share, CheckCircle, Smartphone } from 'lucide-react'
-import logoCircular from 'figma:asset/159f250301c9fc78337e0c8aa784431ded1c39c8.png'
+
+const logoCircular = 'https://img.icons8.com/fluency/96/news.png'
 
 interface FloatingInstallButtonProps {
   deferredPrompt: any

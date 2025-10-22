@@ -7,7 +7,7 @@ import { Badge } from './ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { User, UserPlus, UserMinus, Users, Flame, Megaphone, ShoppingBag, MessageSquare, Calendar, MapPin, Heart, Trophy, Zap, Star, Award, Crown, Sparkles } from 'lucide-react'
 import { projectId, publicAnonKey } from '../utils/supabase/info'
-import { toast } from 'sonner@2.0.3'
+import { toast } from 'sonner'
 
 interface UserProfileProps {
   open: boolean

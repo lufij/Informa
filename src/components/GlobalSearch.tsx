@@ -7,7 +7,7 @@ import { ScrollArea } from './ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs'
 import { Search, Flame, Megaphone, ShoppingBag, MessageSquare, User, X, Clock } from 'lucide-react'
 import { projectId, publicAnonKey } from '../utils/supabase/info'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { UserAvatar } from './UserAvatar'
 
 interface SearchResult {

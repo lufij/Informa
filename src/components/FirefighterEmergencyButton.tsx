@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
 import { Textarea } from './ui/textarea'
 import { Badge } from './ui/badge'
 import { Mic, MicOff, AlertTriangle, Loader2, CheckCircle2, Camera } from 'lucide-react'
 import { projectId } from '../utils/supabase/info'
-import { toast } from 'sonner@2.0.3'
+import { toast } from 'sonner'
 
 interface FirefighterEmergencyButtonProps {
   token: string

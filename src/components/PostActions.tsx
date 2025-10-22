@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from './ui/textarea'
 import { Label } from './ui/label'
 import { projectId } from '../utils/supabase/info'
-import { toast } from 'sonner@2.0.3'
+import { toast } from 'sonner'
 import { ReportDialog } from './ReportDialog'
 
 interface PostActionsProps {

@@ -6,8 +6,8 @@ import { Badge } from './ui/badge'
 import { ScrollArea } from './ui/scroll-area'
 import { Bookmark, Trash2, Clock, Flame, Megaphone, ShoppingBag, MessageSquare } from 'lucide-react'
 import { projectId, publicAnonKey } from '../utils/supabase/info'
-import { toast } from 'sonner@2.0.3'
-import { motion, AnimatePresence } from 'motion/react'
+import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
 import { UserAvatar } from './UserAvatar'
 
 interface SavedPost {

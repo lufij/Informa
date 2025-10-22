@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { X, Download, Smartphone, Share, CheckCircle } from 'lucide-react'
-import logoCircular from 'figma:asset/159f250301c9fc78337e0c8aa784431ded1c39c8.png'
+
+const logoCircular = 'https://img.icons8.com/fluency/96/news.png'
 
 interface InstallAppBannerProps {
   onInstallClick: () => void
