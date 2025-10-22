@@ -784,6 +784,14 @@ app.put('/make-server-3467f1c6/alerts/:id', async (c) => {
 
     const { description, mediaFiles, mediaUrls } = await c.req.json()
     
+    console.log('Updating alert:', alertId, {
+      description,
+      mediaFiles,
+      mediaUrls,
+      existingMediaFiles: alert.mediaFiles,
+      existingMediaUrls: alert.mediaUrls
+    })
+    
     const updatedAlert = {
       ...alert,
       description: description || alert.description,
@@ -794,6 +802,9 @@ app.put('/make-server-3467f1c6/alerts/:id', async (c) => {
     }
 
     await kv.set(`alert:${alertId}`, updatedAlert)
+    
+    console.log('Alert updated successfully:', updatedAlert)
+    
     return c.json(updatedAlert)
   } catch (error) {
     console.log('Error updating alert:', error)

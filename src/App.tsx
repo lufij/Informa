@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { UserAvatar } from './components/UserAvatar'
 import { ContentSkeleton } from './components/ContentSkeleton'
 import { FixPhoneButton } from './components/FixPhoneButton'
@@ -279,29 +279,7 @@ export default function App() {
     }
   }
 
-  // Poll for unread notifications (diferido)
-  useEffect(() => {
-    if (isAuthenticated && token) {
-      // Diferir primera carga de notificaciones 1 segundo
-      const initialTimeout = setTimeout(() => {
-        fetchUnreadCount()
-      }, 1000)
-      
-      // Polling cada 30 segundos
-      const interval = setInterval(() => {
-        if (navigator.onLine) {
-          fetchUnreadCount()
-        }
-      }, 30000)
-      
-      return () => {
-        clearTimeout(initialTimeout)
-        clearInterval(interval)
-      }
-    }
-  }, [isAuthenticated, token])
-
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     if (!token) return
     
     try {
@@ -326,7 +304,29 @@ export default function App() {
         console.error('Error fetching notification count:', error)
       }
     }
-  }
+  }, [token]) // Memoizar con dependencia de token
+
+  // Poll for unread notifications (diferido)
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      // Diferir primera carga de notificaciones 1 segundo
+      const initialTimeout = setTimeout(() => {
+        fetchUnreadCount()
+      }, 1000)
+      
+      // Polling cada 30 segundos
+      const interval = setInterval(() => {
+        if (navigator.onLine) {
+          fetchUnreadCount()
+        }
+      }, 30000)
+      
+      return () => {
+        clearTimeout(initialTimeout)
+        clearInterval(interval)
+      }
+    }
+  }, [isAuthenticated, token, fetchUnreadCount]) // Añadir fetchUnreadCount memoizado
 
   const checkExistingSession = async () => {
     try {

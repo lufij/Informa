@@ -47,7 +47,7 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
         setTimeout(() => setShowButton(true), 3000)
       }
     }
-  }, [deferredPrompt])
+  }, []) // Ejecutar solo una vez al montar el componente
 
   const handleDismiss = () => {
     setShowButton(false)

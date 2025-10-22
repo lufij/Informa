@@ -132,20 +132,25 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
       )
       if (response.ok) {
         const data = await response.json()
-        // Normalize alerts: convert mediaUrls to mediaFiles format if needed
+        console.log('Fetched alerts:', data)
+        
+        // Normalize alerts: ensure both mediaFiles and mediaUrls are handled correctly
         const normalizedAlerts = data.map((alert: Alert) => {
+          // Ensure both formats are present for compatibility
           if (!alert.mediaFiles || alert.mediaFiles.length === 0) {
             // If no mediaFiles but has mediaUrls, convert them
             if (alert.mediaUrls && alert.mediaUrls.length > 0) {
               alert.mediaFiles = alert.mediaUrls.map((url: string) => ({
                 url,
-                type: 'image/jpeg',
-                fileName: url.split('/').pop() || 'image.jpg'
+                type: url.includes('.mp4') || url.includes('.webm') ? 'video/mp4' : 'image/jpeg',
+                fileName: url.split('/').pop() || 'media'
               }))
             }
           }
           return alert
         })
+        
+        console.log('Normalized alerts:', normalizedAlerts)
         setAlerts(normalizedAlerts)
       }
     } catch (error) {
@@ -358,8 +363,19 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
     console.log('Alert mediaUrls:', alert.mediaUrls)
     setEditingAlert(alert)
     setEditDescription(alert.description || alert.message)
+    
     // Show existing media files as previews
-    const existingPreviews = (alert.mediaFiles || []).map(m => m.url)
+    const existingPreviews: string[] = []
+    
+    // Handle both mediaFiles and mediaUrls formats
+    if (alert.mediaFiles && alert.mediaFiles.length > 0) {
+      existingPreviews.push(...alert.mediaFiles.map((m: any) => m.url || m))
+    }
+    if (alert.mediaUrls && alert.mediaUrls.length > 0) {
+      existingPreviews.push(...alert.mediaUrls)
+    }
+    
+    console.log('Setting edit previews:', existingPreviews)
     setEditMediaPreviews(existingPreviews)
     setEditMediaFiles([])
     setIsEditDialogOpen(true)
@@ -399,19 +415,32 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
   }
 
   const removeEditMedia = (index: number) => {
-    const existingMediaCount = editingAlert?.mediaFiles?.length || 0
+    const totalExistingMedia = (
+      (editingAlert?.mediaFiles?.length || 0) + 
+      (editingAlert?.mediaUrls?.length || 0)
+    )
     
     setEditMediaPreviews(prev => prev.filter((_, i) => i !== index))
     
-    if (index >= existingMediaCount) {
+    if (index >= totalExistingMedia) {
       // Removing newly added file
-      const fileIndex = index - existingMediaCount
+      const fileIndex = index - totalExistingMedia
       setEditMediaFiles(prev => prev.filter((_, i) => i !== fileIndex))
     } else {
       // Removing existing media - update editingAlert
       if (editingAlert) {
-        const updatedMediaFiles = (editingAlert.mediaFiles || []).filter((_, i) => i !== index)
-        setEditingAlert({ ...editingAlert, mediaFiles: updatedMediaFiles })
+        const mediaFilesCount = editingAlert.mediaFiles?.length || 0
+        
+        if (index < mediaFilesCount) {
+          // Removing from mediaFiles
+          const updatedMediaFiles = (editingAlert.mediaFiles || []).filter((_, i) => i !== index)
+          setEditingAlert({ ...editingAlert, mediaFiles: updatedMediaFiles })
+        } else {
+          // Removing from mediaUrls
+          const urlIndex = index - mediaFilesCount
+          const updatedMediaUrls = (editingAlert.mediaUrls || []).filter((_, i) => i !== urlIndex)
+          setEditingAlert({ ...editingAlert, mediaUrls: updatedMediaUrls })
+        }
       }
     }
   }
@@ -450,15 +479,21 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
         }
       }
 
-      // Combine existing and new media
+      // Combine existing and new media correctly
       const existingMedia = editingAlert.mediaFiles || []
       const allMediaFiles = [...existingMedia, ...newMediaFiles]
+      
+      // Also handle mediaUrls for compatibility
+      const existingUrls = editingAlert.mediaUrls || []
+      const newUrls = newMediaFiles.map(media => media.url)
+      const allMediaUrls = [...existingUrls, ...newUrls]
 
       console.log('Updating alert with:', {
         description: editDescription,
         existingMedia,
         newMediaFiles,
-        allMediaFiles
+        allMediaFiles,
+        allMediaUrls
       })
 
       const response = await fetch(
@@ -471,7 +506,8 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
           },
           body: JSON.stringify({
             description: editDescription,
-            mediaFiles: allMediaFiles
+            mediaFiles: allMediaFiles,
+            mediaUrls: allMediaUrls
           })
         }
       )

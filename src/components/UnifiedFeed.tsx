@@ -56,7 +56,7 @@ export function UnifiedFeed({ token, userProfile, onNavigate }: UnifiedFeedProps
     setPage(0)
     setHasMore(true)
     fetchFeed(0, true)
-  }, [filter, token])
+  }, [filter]) // Removido token para evitar bucle infinito
 
   // Setup infinite scroll observer
   useEffect(() => {
@@ -64,27 +64,30 @@ export function UnifiedFeed({ token, userProfile, onNavigate }: UnifiedFeedProps
       observerRef.current.disconnect()
     }
 
-    observerRef.current = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
-          loadMore()
+          const nextPage = page + 1
+          setPage(nextPage)
+          // Llamar fetchFeed sin incluirlo en dependencias para evitar bucle
+          fetchFeed(nextPage, false)
         }
       },
       { threshold: 0.1 }
     )
 
     if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current)
+      observer.observe(loadMoreRef.current)
     }
+
+    observerRef.current = observer
 
     return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect()
-      }
+      observer.disconnect()
     }
-  }, [hasMore, isLoading, isLoadingMore, page])
+  }, [hasMore, isLoading, isLoadingMore, page]) // Sin fetchFeed para evitar bucle infinito
 
-  const fetchFeed = async (pageNum: number = 0, reset: boolean = false) => {
+  const fetchFeed = useCallback(async (pageNum: number = 0, reset: boolean = false) => {
     if (reset) {
       setIsLoading(true)
     } else {
@@ -128,13 +131,7 @@ export function UnifiedFeed({ token, userProfile, onNavigate }: UnifiedFeedProps
       setIsLoading(false)
       setIsLoadingMore(false)
     }
-  }
-
-  const loadMore = useCallback(() => {
-    const nextPage = page + 1
-    setPage(nextPage)
-    fetchFeed(nextPage, false)
-  }, [page, filter, token])
+  }, [filter, token]) // Dependencias específicas memoizadas
 
   const getFeedIcon = (type: string) => {
     switch (type) {
