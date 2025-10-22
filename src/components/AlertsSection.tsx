@@ -132,7 +132,21 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
       )
       if (response.ok) {
         const data = await response.json()
-        setAlerts(data)
+        // Normalize alerts: convert mediaUrls to mediaFiles format if needed
+        const normalizedAlerts = data.map((alert: Alert) => {
+          if (!alert.mediaFiles || alert.mediaFiles.length === 0) {
+            // If no mediaFiles but has mediaUrls, convert them
+            if (alert.mediaUrls && alert.mediaUrls.length > 0) {
+              alert.mediaFiles = alert.mediaUrls.map((url: string) => ({
+                url,
+                type: 'image/jpeg',
+                fileName: url.split('/').pop() || 'image.jpg'
+              }))
+            }
+          }
+          return alert
+        })
+        setAlerts(normalizedAlerts)
       }
     } catch (error) {
       console.error('Error al cargar alertas:', error)
