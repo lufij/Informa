@@ -30,6 +30,6 @@
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist", "build", "supabase"],
+  "exclude": ["node_modules", "dist", "build", "supabase", "api"],
   "references": [{ "path": "./src/tsconfig.node.json" }]
 }
