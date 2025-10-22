@@ -1169,7 +1169,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
+                    capture="user"
                     onChange={handleFileSelect}
                     className="max-w-full"
                   />

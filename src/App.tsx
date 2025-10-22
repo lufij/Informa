@@ -193,11 +193,14 @@ export default function App() {
     
     if (deferredPrompt) {
       try {
+        console.log('Intentando instalar PWA...')
         // Show the install prompt
-        await deferredPrompt.prompt()
+        const promptResult = await deferredPrompt.prompt()
+        console.log('Prompt mostrado:', promptResult)
         
         // Wait for the user to respond to the prompt
         const { outcome } = await deferredPrompt.userChoice
+        console.log('Resultado de instalación:', outcome)
         
         if (outcome === 'accepted') {
           toast.success('¡App instalada! 🎉', {
@@ -214,23 +217,25 @@ export default function App() {
         setShowInstallBanner(false)
       } catch (error) {
         console.error('Error al instalar PWA:', error)
-        // En Android, si falla, no mostrar nada (silent fail)
-        if (isIOS) {
-          toast.info('Instrucciones para iOS', {
-            description: 'En Safari: toca Compartir > Añadir a pantalla de inicio',
-            duration: 6000
-          })
-        }
+        toast.error('Error al instalar', {
+          description: 'Intenta desde el menú de Chrome: Más opciones > Instalar app',
+          duration: 5000
+        })
       }
     } else {
-      // No prompt available - only show instructions for iOS
+      console.log('No hay deferredPrompt disponible')
+      // No prompt available
       if (isIOS) {
         toast.info('Instrucciones para iOS', {
           description: 'En Safari: toca Compartir > Añadir a pantalla de inicio',
           duration: 6000
         })
+      } else {
+        toast.info('Instalar desde el navegador', {
+          description: 'En Chrome: Menú (⋮) > Instalar aplicación',
+          duration: 6000
+        })
       }
-      // Para Android sin prompt, no hacer nada (silent)
     }
   }
   

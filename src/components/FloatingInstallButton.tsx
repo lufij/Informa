@@ -59,9 +59,15 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
       // iOS - show manual instructions
       setShowInstructions(true)
     } else {
-      // Android - always try automatic installation
-      await onInstall()
-      setShowButton(false)
+      // Android - try automatic installation
+      if (deferredPrompt) {
+        await onInstall()
+        // Only hide if installation was attempted
+        setTimeout(() => setShowButton(false), 500)
+      } else {
+        // No prompt - show manual instructions
+        setShowInstructions(true)
+      }
     }
   }
 
