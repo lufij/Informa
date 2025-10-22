@@ -24,7 +24,7 @@ const PWANetworkStatus = lazy(() => import('./components/PWANetworkStatus').then
 const PublicContentView = lazy(() => import('./components/PublicContentView').then(m => ({ default: m.PublicContentView })))
 const InstallAppBanner = lazy(() => import('./components/InstallAppBanner').then(m => ({ default: m.InstallAppBanner })))
 const FloatingInstallButton = lazy(() => import('./components/FloatingInstallButton').then(m => ({ default: m.FloatingInstallButton })))
-const EmergencyAlertBanner = lazy(() => import('./components/EmergencyAlertBanner').then(m => ({ default: m.EmergencyAlertBanner })))
+// const EmergencyAlertBanner = lazy(() => import('./components/EmergencyAlertBanner').then(m => ({ default: m.EmergencyAlertBanner })))
 import { Button } from './components/ui/button'
 import { Badge } from './components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
@@ -32,10 +32,10 @@ import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner'
 import { getSupabaseClient } from './utils/supabase/client'
 import { projectId, publicAnonKey } from './utils/supabase/info'
-import { Flame, Megaphone, ShoppingBag, MessageSquare, LogOut, Sparkles, TrendingUp, Eye, LogIn, UserPlus, Bell, Search, Mail, Bookmark, Rss, Shield, User, Menu } from 'lucide-react'
+import { LogOut, Sparkles, TrendingUp, LogIn, UserPlus, Bell, Search, Mail, Bookmark, Rss, Shield, User, Menu } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './components/ui/dropdown-menu'
-import logoCircular from 'figma:asset/159f250301c9fc78337e0c8aa784431ded1c39c8.png'
+// import logoCircular from 'figma:asset/159f250301c9fc78337e0c8aa784431ded1c39c8.png'
 
 export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
@@ -67,6 +67,12 @@ export default function App() {
     // Update page title
     document.title = 'Informa - Lo que está pasando ahora'
     
+    // Prevenir múltiples ejecuciones usando variable global
+    if ((window as any).__INFORMA_INITIALIZED) {
+      return
+    }
+    ;(window as any).__INFORMA_INITIALIZED = true
+    
     // Check for deep links FIRST (before checking session)
     const params = new URLSearchParams(window.location.search)
     const view = params.get('view')
@@ -81,10 +87,10 @@ export default function App() {
     // Check existing session (critical)
     checkExistingSession()
     
-    // Diferir llamadas no críticas
-    setTimeout(() => {
+    // Diferir llamadas no críticas más tiempo para evitar sobrecarga
+    const migrationTimeout = setTimeout(() => {
       migrateFirefighterUser()
-    }, 2000) // Ejecutar después de 2 segundos
+    }, 5000) // Aumentado a 5 segundos
     
     // Listen for PWA install prompt
     const handleBeforeInstall = (e: Event) => {
@@ -93,13 +99,14 @@ export default function App() {
     }
     window.addEventListener('beforeinstallprompt', handleBeforeInstall)
     
-    // Request notification permissions when app starts
-    requestNotificationPermission()
+    // Request notification permissions cuando sea necesario (no inmediatamente)
+    // requestNotificationPermission() // Comentado para evitar bucles
     
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
+      clearTimeout(migrationTimeout)
     }
-  }, [])
+  }, []) // Sin dependencias para evitar re-ejecuciones
   
   // Request notification permissions
   const requestNotificationPermission = async () => {
@@ -189,11 +196,11 @@ export default function App() {
     }
   }, [isAuthenticated, deepLinkView, deepLinkId])
   
-  const handleViewEmergencyAlert = (alertId: string) => {
-    setActiveTab('alertas')
-    setHighlightedItemId(alertId)
-    setTimeout(() => setHighlightedItemId(null), 5000)
-  }
+  // const handleViewEmergencyAlert = (alertId: string) => {
+  //   setActiveTab('alertas')
+  //   setHighlightedItemId(alertId)
+  //   setTimeout(() => setHighlightedItemId(null), 5000)
+  // }
   
   const handleInstallPWA = async () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -283,7 +290,8 @@ export default function App() {
     if (!token) return
     
     try {
-      const response = await fetch(
+      // Timeout para evitar esperas infinitas en móviles
+      const fetchPromise = fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/notifications`,
         {
           headers: {
@@ -292,17 +300,20 @@ export default function App() {
         }
       )
       
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Notification fetch timeout')), 5000)
+      )
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response
+      
       if (response.ok) {
         const notifications = await response.json()
         const unread = notifications.filter((n: any) => !n.read).length
         setUnreadNotifications(unread)
       }
     } catch (error) {
-      // Silent fail - don't log network errors for background polling
-      // Only log if it's not a network connectivity issue
-      if (error instanceof Error && !error.message.includes('fetch')) {
-        console.error('Error fetching notification count:', error)
-      }
+      // Silent fail - no mostrar errores para evitar bucles
+      console.log('Notification fetch skipped (timeout or error)')
     }
   }, [token]) // Memoizar con dependencia de token
 
@@ -332,7 +343,13 @@ export default function App() {
     try {
       const supabase = getSupabaseClient()
 
-      const { data: { session }, error } = await supabase.auth.getSession()
+      // Timeout para evitar esperas infinitas
+      const sessionPromise = supabase.auth.getSession()
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Session check timeout')), 10000)
+      )
+      
+      const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any
 
       if (session && session.access_token) {
         // Establecer token inmediatamente para mostrar UI
@@ -341,7 +358,7 @@ export default function App() {
         setIsCheckingSession(false) // Liberar UI inmediatamente
         
         // Fetch user profile en background (no bloquea la UI)
-        fetch(
+        const profilePromise = fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/auth/profile`,
           {
             headers: {
@@ -349,7 +366,14 @@ export default function App() {
             }
           }
         )
-        .then(response => {
+        
+        // Timeout para profile también
+        const profileTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 8000)
+        )
+        
+        Promise.race([profilePromise, profileTimeoutPromise])
+        .then((response: any) => {
           if (response.ok) {
             return response.json()
           }
@@ -382,18 +406,16 @@ export default function App() {
           }
         })
         .catch(error => {
-          // Si falla el perfil, cerrar sesión
-          console.error('Error fetching profile:', error)
-          setIsAuthenticated(false)
-          setToken(null)
+          // Si falla el perfil, NO cerrar sesión para evitar bucles
+          console.error('Error fetching profile (non-critical):', error)
+          // setIsAuthenticated(false) // Comentado para evitar bucles
+          // setToken(null) // Comentado para evitar bucles
         })
       } else {
         setIsCheckingSession(false)
       }
     } catch (error) {
-      if (error instanceof Error && !error.message.includes('fetch')) {
-        console.error('Error al verificar sesión:', error)
-      }
+      console.error('Error al verificar sesión:', error)
       setIsCheckingSession(false)
     }
   }
@@ -486,7 +508,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600">
       <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center shadow-2xl mb-4 animate-bounce">
         <img 
-          src={logoCircular} 
+          src="/icons/icon-192x192.png" 
           alt="Informa" 
           className="w-full h-full object-contain p-2"
         />
@@ -523,7 +545,7 @@ export default function App() {
             <div className="flex items-center gap-2 min-w-0 flex-shrink">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-lg p-1 flex-shrink-0">
                 <img 
-                  src={logoCircular} 
+                  src="/icons/icon-192x192.png" 
                   alt="Informa Logo" 
                   className="w-full h-full object-contain"
                 />
@@ -790,7 +812,7 @@ export default function App() {
                 userProfile={userProfile} 
                 onRequestAuth={() => setShowAuthDialog(true)}
                 onOpenSettings={() => setShowSettings(true)}
-                onNavigateToPost={(section, postId) => setActiveTab(section)}
+                onNavigateToPost={(section, _postId) => setActiveTab(section)}
                 highlightedItemId={highlightedItemId}
                 onItemHighlighted={() => setHighlightedItemId(null)}
               />
@@ -804,7 +826,7 @@ export default function App() {
                 userProfile={userProfile} 
                 onRequestAuth={() => setShowAuthDialog(true)}
                 onOpenSettings={() => setShowSettings(true)}
-                onNavigateToPost={(section, postId) => setActiveTab(section)}
+                onNavigateToPost={(section, _postId) => setActiveTab(section)}
                 highlightedItemId={highlightedItemId}
                 onItemHighlighted={() => setHighlightedItemId(null)}
                 refreshTrigger={alertsRefreshTrigger}
@@ -819,7 +841,7 @@ export default function App() {
                 userProfile={userProfile} 
                 onRequestAuth={() => setShowAuthDialog(true)}
                 onOpenSettings={() => setShowSettings(true)}
-                onNavigateToPost={(section, postId) => setActiveTab(section)}
+                onNavigateToPost={(section, _postId) => setActiveTab(section)}
                 highlightedItemId={highlightedItemId}
                 onItemHighlighted={() => setHighlightedItemId(null)}
               />
@@ -833,7 +855,7 @@ export default function App() {
                 userProfile={userProfile} 
                 onRequestAuth={() => setShowAuthDialog(true)}
                 onOpenSettings={() => setShowSettings(true)}
-                onNavigateToPost={(section, postId) => setActiveTab(section)}
+                onNavigateToPost={(section, _postId) => setActiveTab(section)}
                 highlightedItemId={highlightedItemId}
                 onItemHighlighted={() => setHighlightedItemId(null)}
               />
@@ -912,7 +934,7 @@ export default function App() {
             }}
             token={token}
             onNavigate={(section, itemId) => {
-              setHighlightedItemId(itemId)
+              setHighlightedItemId(itemId || null)
               setActiveTab(section)
               setShowNotifications(false)
             }}
@@ -1035,9 +1057,11 @@ export default function App() {
       <Toaster />
       
       {/* Emergency Alert Banner - TEMPORARILY DISABLED */}
-      {/* <Suspense fallback={null}>
+      {/*
+      <Suspense fallback={null}>
         <EmergencyAlertBanner onViewAlert={handleViewEmergencyAlert} />
-      </Suspense> */}
+      </Suspense>
+      */}
       
       {/* PWA Components */}
       <Suspense fallback={null}>

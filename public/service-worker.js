@@ -1,34 +1,35 @@
-const CACHE_NAME = 'informa-v1.0.1';
-const RUNTIME_CACHE = 'informa-runtime-v1';
-const API_CACHE = 'informa-api-v1';
+// Service Worker DISABLED to fix infinite loops and cache issues
+// This was causing PUT method cache errors and mobile loading problems
 
-// Assets to cache immediately
-const PRECACHE_URLS = [
-  '/',
-  '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
-];
+console.log('[SW] Service worker disabled for debugging');
 
-// Install event - precache critical assets
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
+// Simple service worker that doesn't cache anything
+self.addEventListener('install', function(event) {
+  console.log('[SW] Install event - skipping');
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  console.log('[SW] Activate event - clearing all caches');
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Precaching app shell');
-        return cache.addAll(PRECACHE_URLS.map(url => new Request(url, { cache: 'reload' })));
-      })
-      .then(() => self.skipWaiting())
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.map(function(cacheName) {
+          console.log('[SW] Deleting cache:', cacheName);
+          return caches.delete(cacheName);
+        })
+      );
+    }).then(function() {
+      return self.clients.claim();
+    })
   );
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
-  const currentCaches = [CACHE_NAME, RUNTIME_CACHE, API_CACHE];
-  event.waitUntil(
-    caches.keys()
+// Don't intercept any fetch requests - let them pass through
+self.addEventListener('fetch', function(event) {
+  // Do nothing - let all requests pass through without caching
+  return;
+});
       .then((cacheNames) => {
         return cacheNames.filter((cacheName) => !currentCaches.includes(cacheName));
       })

@@ -76,7 +76,26 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
 
   useEffect(() => {
     fetchForums()
-  }, [])
+    
+    // Debug: Log user role when component loads
+    if (userProfile) {
+      console.log('👤 ForumsSection - User Profile:', {
+        phone: userProfile.phone,
+        role: userProfile.role,
+        isAdmin: userProfile.role === 'admin'
+      })
+      
+      // Show admin notification
+      if (userProfile.role === 'admin') {
+        setTimeout(() => {
+          toast.info('🛡️ Privilegios de Administrador Activos', {
+            description: 'Puedes eliminar cualquier tema del foro usando el botón 🗑️',
+            duration: 3000
+          })
+        }, 1000)
+      }
+    }
+  }, [userProfile])
 
   // Scroll to highlighted item
   useEffect(() => {
@@ -337,14 +356,19 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
     // Check if user is admin
     if (userProfile.role !== 'admin') {
       toast.error('Solo los administradores pueden eliminar temas')
+      console.log('User role:', userProfile.role, 'Required: admin')
       return
     }
 
-    if (!confirm('¿Estás seguro de que deseas eliminar este tema? Esta acción no se puede deshacer.')) {
+    const forum = forums.find(f => f.id === forumId)
+    const forumTitle = forum ? forum.topic : 'este tema'
+    
+    if (!confirm(`¿Estás seguro de que deseas eliminar "${forumTitle}"?\n\nEsta acción eliminará el tema y todas sus respuestas. Esta acción no se puede deshacer.`)) {
       return
     }
 
     try {
+      console.log('Attempting to delete forum:', forumId)
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/forums/${forumId}`,
         {
@@ -356,14 +380,18 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
         }
       )
 
+      console.log('Delete response status:', response.status)
+      
       if (response.ok) {
         setForums(forums.filter(f => f.id !== forumId))
         if (selectedForum?.id === forumId) {
           setSelectedForum(null)
         }
-        toast.success('Tema eliminado correctamente')
+        toast.success('🗑️ Tema eliminado correctamente')
+        console.log('Forum deleted successfully')
       } else {
         const error = await response.json()
+        console.error('Delete error response:', error)
         toast.error(error.error || 'Error al eliminar el tema')
       }
     } catch (error) {
@@ -382,15 +410,21 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
           
           {/* Admin Delete Button */}
           {userProfile?.role === 'admin' && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => handleDeleteForum(selectedForum.id)}
-              className="gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Eliminar Tema
-            </Button>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-red-600 border-red-600 bg-red-50">
+                <Shield className="w-3 h-3 mr-1" />
+                Admin
+              </Badge>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDeleteForum(selectedForum.id)}
+                className="gap-2 bg-red-600 hover:bg-red-700 shadow-lg"
+              >
+                <Trash2 className="w-4 h-4" />
+                Eliminar Tema
+              </Button>
+            </div>
           )}
         </div>
 
@@ -732,17 +766,24 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
                   
                   {/* Admin Delete Button */}
                   {userProfile?.role === 'admin' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation()
-                        handleDeleteForum(forum.id)
-                      }}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-red-600 border-red-600 bg-red-50 text-xs">
+                        <Shield className="w-3 h-3 mr-1" />
+                        Admin
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation()
+                          handleDeleteForum(forum.id)
+                        }}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 shadow-sm"
+                        title="Eliminar tema (Solo administradores)"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
                 <CardTitle>{forum.topic}</CardTitle>
