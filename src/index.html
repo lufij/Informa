@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es-GT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+  
+  <!-- Primary Meta Tags -->
+  <title>Informa - Gualán, Zacapa</title>
+  <meta name="title" content="Informa - Gualán, Zacapa" />
+  <meta name="description" content="Red social comunitaria de Gualán, Zacapa, Guatemala. Noticias verificadas, alertas, clasificados y foros locales." />
+  <meta name="keywords" content="Gualán, Zacapa, Guatemala, noticias, alertas, clasificados, comunidad, foros" />
+  <meta name="author" content="Informa Gualán" />
+  <meta name="language" content="Spanish" />
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#ec4899" />
+  <meta name="msapplication-navbutton-color" content="#ec4899" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  
+  <!-- PWA Meta Tags -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="Informa" />
+  <meta name="apple-mobile-web-app-title" content="Informa" />
+  
+  <!-- iOS Specific -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167x167.png" />
+  
+  <!-- Android Specific -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  
+  <!-- Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://informa-gualan.vercel.app/" />
+  <meta property="og:title" content="Informa - Gualán, Zacapa" />
+  <meta property="og:description" content="Red social comunitaria de Gualán, Zacapa, Guatemala. Noticias, alertas, clasificados y foros." />
+  <meta property="og:image" content="/icons/og-image.png" />
+  <meta property="og:locale" content="es_GT" />
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://informa-gualan.vercel.app/" />
+  <meta property="twitter:title" content="Informa - Gualán, Zacapa" />
+  <meta property="twitter:description" content="Red social comunitaria de Gualán, Zacapa, Guatemala." />
+  <meta property="twitter:image" content="/icons/twitter-image.png" />
+  
+  <!-- Security -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="referrer" content="no-referrer-when-downgrade" />
+  
+  <!-- Preconnect to improve performance -->
+  <link rel="preconnect" href="https://esm.sh" />
+  <link rel="dns-prefetch" href="https://esm.sh" />
+  
+  <!-- App Install Banner -->
+  <meta name="msapplication-TileColor" content="#ec4899" />
+  <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+  <meta name="msapplication-config" content="/browserconfig.xml" />
+  
+  <!-- Disable automatic phone number detection -->
+  <meta name="format-detection" content="telephone=no" />
+  
+  <style>
+    /* Loading screen styles */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #fbbf24 0%, #ec4899 50%, #9333ea 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease-out;
+    }
+    
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .loader {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loader-text {
+      position: absolute;
+      margin-top: 100px;
+      color: white;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div>
+      <div class="loader"></div>
+      <div class="loader-text">Cargando Informa...</div>
+    </div>
+  </div>
+  
+  <!-- App Root -->
+  <div id="root"></div>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    // Hide loading screen when app is ready
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          loadingScreen.classList.add('hidden');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+          }, 300);
+        }
+      }, 500);
+    });
+    
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then((registration) => {
+            console.log('✅ Service Worker registrado exitosamente:', registration.scope);
+            
+            // Check for updates periodically
+            setInterval(() => {
+              registration.update();
+            }, 60000); // Check every minute
+            
+            // Listen for new service worker
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              console.log('🔄 Nueva versión de la app disponible');
+              
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker installed, show update notification
+                  if (confirm('¡Hay una nueva versión de Informa disponible! ¿Deseas actualizarla ahora?')) {
+                    newWorker.postMessage({ action: 'skipWaiting' });
+                    window.location.reload();
+                  }
+                }
+              });
+            });
+          })
+          .catch((error) => {
+            console.error('❌ Error al registrar Service Worker:', error);
+          });
+      });
+      
+      // Handle service worker updates
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+    }
+    
+    // PWA Install Prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      deferredPrompt = e;
+      console.log('💾 App instalable detectada');
+      
+      // Show custom install button/banner after a delay
+      setTimeout(() => {
+        showInstallPromotion();
+      }, 3000);
+    });
+    
+    function showInstallPromotion() {
+      // You can trigger this from your React app
+      window.dispatchEvent(new CustomEvent('showInstallPrompt', { 
+        detail: { prompt: deferredPrompt } 
+      }));
+    }
+    
+    // Track if app was launched from home screen
+    window.addEventListener('appinstalled', () => {
+      console.log('✅ App instalada en el dispositivo');
+      deferredPrompt = null;
+      
+      // Analytics or celebration
+      if (window.gtag) {
+        gtag('event', 'app_installed');
+      }
+    });
+    
+    // Handle share target
+    if ('share' in navigator) {
+      window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        const sharedTitle = params.get('title');
+        const sharedText = params.get('text');
+        const sharedUrl = params.get('url');
+        
+        if (sharedTitle || sharedText || sharedUrl) {
+          // Pass shared content to React app
+          window.sharedContent = {
+            title: sharedTitle,
+            text: sharedText,
+            url: sharedUrl
+          };
+        }
+      });
+    }
+    
+    // Online/Offline detection
+    window.addEventListener('online', () => {
+      console.log('🟢 Conexión restaurada');
+      // Notify React app
+      window.dispatchEvent(new CustomEvent('connectionChange', { 
+        detail: { online: true } 
+      }));
+    });
+    
+    window.addEventListener('offline', () => {
+      console.log('🔴 Sin conexión a internet');
+      // Notify React app
+      window.dispatchEvent(new CustomEvent('connectionChange', { 
+        detail: { online: false } 
+      }));
+    });
+    
+    // Prevent zoom on double tap (optional, for better UX)
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (event) => {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, false);
+    
+    // Add to home screen guidance for iOS
+    function isIOS() {
+      return /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    
+    function isInStandaloneMode() {
+      return window.matchMedia('(display-mode: standalone)').matches || 
+             window.navigator.standalone === true;
+    }
+    
+    if (isIOS() && !isInStandaloneMode()) {
+      // Show iOS install instructions
+      console.log('📱 Dispositivo iOS detectado - mostrar instrucciones de instalación');
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('showIOSInstallInstructions'));
+      }, 5000);
+    }
+  </script>
+  
+  <script type="module" src="/App.tsx"></script>
+</body>
+</html>
