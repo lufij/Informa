@@ -353,6 +353,9 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
   }
 
   const openEditDialog = (alert: Alert) => {
+    console.log('Opening edit dialog with alert:', alert)
+    console.log('Alert mediaFiles:', alert.mediaFiles)
+    console.log('Alert mediaUrls:', alert.mediaUrls)
     setEditingAlert(alert)
     setEditDescription(alert.description || alert.message)
     // Show existing media files as previews
