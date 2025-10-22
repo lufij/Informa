@@ -782,13 +782,14 @@ app.put('/make-server-3467f1c6/alerts/:id', async (c) => {
       return c.json({ error: 'No autorizado para editar esta alerta' }, 403)
     }
 
-    const { description, mediaUrls } = await c.req.json()
+    const { description, mediaFiles, mediaUrls } = await c.req.json()
     
     const updatedAlert = {
       ...alert,
       description: description || alert.description,
       message: description || alert.message,
-      mediaUrls: mediaUrls || alert.mediaUrls,
+      mediaFiles: mediaFiles || alert.mediaFiles || [],
+      mediaUrls: mediaUrls || alert.mediaUrls || [],
       updatedAt: new Date().toISOString()
     }
 
@@ -1023,6 +1024,41 @@ app.post('/make-server-3467f1c6/forums', async (c) => {
   } catch (error) {
     console.log('Error creating forum:', error)
     return c.json({ error: 'Error creating forum' }, 500)
+  }
+})
+
+app.delete('/make-server-3467f1c6/forums/:id', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const profile = await getUserProfile(user.id)
+    const forumId = c.req.param('id')
+    const forum = await kv.get(`forum:${forumId}`)
+
+    if (!forum) {
+      return c.json({ error: 'Tema no encontrado' }, 404)
+    }
+
+    // Only admin or forum author can delete
+    if (profile.role !== 'admin' && forum.authorId !== user.id) {
+      return c.json({ error: 'No autorizado para eliminar este tema' }, 403)
+    }
+
+    // Delete all posts in the forum
+    const posts = await kv.getByPrefix(`forum_post:${forumId}:`)
+    for (const post of posts) {
+      await kv.del(`forum_post:${forumId}:${post.id}`)
+    }
+
+    // Delete the forum
+    await kv.del(`forum:${forumId}`)
+    return c.json({ success: true })
+  } catch (error) {
+    console.log('Error deleting forum:', error)
+    return c.json({ error: 'Error al eliminar el tema' }, 500)
   }
 })
 
