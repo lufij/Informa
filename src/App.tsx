@@ -24,6 +24,7 @@ const PWANetworkStatus = lazy(() => import('./components/PWANetworkStatus').then
 const PublicContentView = lazy(() => import('./components/PublicContentView').then(m => ({ default: m.PublicContentView })))
 const InstallAppBanner = lazy(() => import('./components/InstallAppBanner').then(m => ({ default: m.InstallAppBanner })))
 const FloatingInstallButton = lazy(() => import('./components/FloatingInstallButton').then(m => ({ default: m.FloatingInstallButton })))
+const EmergencyAlertBanner = lazy(() => import('./components/EmergencyAlertBanner').then(m => ({ default: m.EmergencyAlertBanner })))
 import { Button } from './components/ui/button'
 import { Badge } from './components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
@@ -187,6 +188,12 @@ export default function App() {
       })
     }
   }, [isAuthenticated, deepLinkView, deepLinkId])
+  
+  const handleViewEmergencyAlert = (alertId: string) => {
+    setActiveTab('alertas')
+    setHighlightedItemId(alertId)
+    setTimeout(() => setHighlightedItemId(null), 5000)
+  }
   
   const handleInstallPWA = async () => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -1026,6 +1033,11 @@ export default function App() {
       )}
 
       <Toaster />
+      
+      {/* Emergency Alert Banner */}
+      <Suspense fallback={null}>
+        <EmergencyAlertBanner onViewAlert={handleViewEmergencyAlert} />
+      </Suspense>
       
       {/* PWA Components */}
       <Suspense fallback={null}>
