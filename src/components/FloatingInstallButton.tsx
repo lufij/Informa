@@ -54,12 +54,18 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
     localStorage.setItem('floatingInstallDismissed', Date.now().toString())
   }
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isIOS) {
       setShowInstructions(true)
     } else {
-      onInstall()
-      setShowButton(false)
+      // Android - try to install
+      if (deferredPrompt) {
+        await onInstall()
+        setShowButton(false)
+      } else {
+        // No prompt available - show manual instructions
+        setShowInstructions(true)
+      }
     }
   }
 
@@ -99,7 +105,7 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
         </div>
       </div>
 
-      {/* iOS Installation Instructions Dialog */}
+      {/* Installation Instructions Dialog */}
       <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
         <DialogContent className="max-w-md bg-gradient-to-br from-purple-50 via-pink-50 to-yellow-50 border-2 border-purple-200">
           <DialogHeader>
@@ -109,7 +115,7 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
               </div>
             </div>
             <DialogTitle className="text-center text-2xl bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              📱 Cómo instalar en iPhone/iPad
+              📱 Cómo instalar {isIOS ? 'en iPhone/iPad' : 'en Android'}
             </DialogTitle>
             <DialogDescription className="text-center text-gray-600">
               Sigue estos sencillos pasos para tener Informa en tu pantalla de inicio
@@ -117,6 +123,9 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {isIOS ? (
+              // iOS Instructions
+              <>
             {/* Step 1 */}
             <div className="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-2 border-purple-100">
               <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-lg">
@@ -173,6 +182,60 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
                 </p>
               </div>
             </div>
+              </>
+            ) : (
+              // Android Instructions
+              <>
+            {/* Step 1 - Android */}
+            <div className="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-2 border-purple-100">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-lg">
+                1
+              </div>
+              <div className="flex-1">
+                <p className="text-gray-700 font-medium mb-2">
+                  Abre el menú de Chrome <strong>(⋮)</strong> en la esquina superior derecha
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2 - Android */}
+            <div className="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-2 border-purple-100">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-lg">
+                2
+              </div>
+              <div className="flex-1">
+                <p className="text-gray-700 font-medium mb-2">
+                  Toca <strong>"Instalar aplicación"</strong> o <strong>"Agregar a pantalla de inicio"</strong>
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3 - Android */}
+            <div className="flex items-start gap-4 p-4 bg-white rounded-lg shadow-sm border-2 border-purple-100">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-lg">
+                3
+              </div>
+              <div className="flex-1">
+                <p className="text-gray-700 font-medium">
+                  Confirma tocando <strong>"Instalar"</strong>
+                </p>
+              </div>
+            </div>
+
+            {/* Success message */}
+            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border-2 border-green-200">
+              <CheckCircle className="w-8 h-8 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-green-700 mb-1">
+                  ¡Listo! 🎉
+                </p>
+                <p className="text-xs text-green-600">
+                  Informa aparecerá en tu pantalla de inicio como una app nativa
+                </p>
+              </div>
+            </div>
+              </>
+            )}
           </div>
 
           <div className="flex gap-2">

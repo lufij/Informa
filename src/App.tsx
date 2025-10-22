@@ -120,23 +120,48 @@ export default function App() {
   
   const handleInstallPWA = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      
-      if (outcome === 'accepted') {
-        toast.success('¡App instalada! 🎉', {
-          description: 'Ahora puedes acceder desde tu pantalla de inicio'
+      try {
+        // Show the install prompt
+        await deferredPrompt.prompt()
+        
+        // Wait for the user to respond to the prompt
+        const { outcome } = await deferredPrompt.userChoice
+        
+        if (outcome === 'accepted') {
+          toast.success('¡App instalada! 🎉', {
+            description: 'Ahora puedes acceder desde tu pantalla de inicio'
+          })
+        } else {
+          toast.info('Instalación cancelada', {
+            description: 'Puedes instalar la app en cualquier momento desde el menú del navegador'
+          })
+        }
+        
+        // Clear the prompt as it can only be used once
+        setDeferredPrompt(null)
+        setShowInstallBanner(false)
+      } catch (error) {
+        console.error('Error al instalar PWA:', error)
+        toast.error('No se pudo instalar', {
+          description: 'Intenta desde el menú de Chrome: Más opciones > Instalar app'
         })
       }
-      
-      setDeferredPrompt(null)
-      setShowInstallBanner(false)
     } else {
-      // iOS or already installed - show instructions
-      toast.info('Instrucciones para instalar', {
-        description: 'En Safari: toca Compartir > Añadir a pantalla de inicio',
-        duration: 6000
-      })
+      // No prompt available - check if it's iOS or Android
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      
+      if (isIOS) {
+        toast.info('Instrucciones para iOS', {
+          description: 'En Safari: toca Compartir > Añadir a pantalla de inicio',
+          duration: 6000
+        })
+      } else {
+        // Android but no prompt (might be already installed or criteria not met)
+        toast.info('Instalar desde el navegador', {
+          description: 'En Chrome: Menú (⋮) > Instalar aplicación',
+          duration: 6000
+        })
+      }
     }
   }
   
