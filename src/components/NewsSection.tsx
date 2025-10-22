@@ -16,6 +16,8 @@ import { UserAvatar } from './UserAvatar'
 import { PostActions } from './PostActions'
 import { EditPostDialog } from './EditPostDialog'
 import { ImageViewer } from './ImageViewer'
+import { optimizeMediaFile } from '../utils/imageOptimization'
+import { LazyImage } from './LazyImage'
 
 interface MediaFile {
   url: string
@@ -133,7 +135,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
     }
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     
     // Validate file types
@@ -146,7 +148,22 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       toast.error('Algunos archivos no son válidos. Solo se permiten imágenes y videos.')
     }
 
-    setSelectedFiles(prev => [...prev, ...validFiles])
+    // Optimize files before adding them
+    const optimizedFiles: File[] = []
+    for (const file of validFiles) {
+      try {
+        const optimized = await optimizeMediaFile(file)
+        // Convert Blob back to File with original name
+        const optimizedFile = new File([optimized], file.name, { type: optimized.type })
+        optimizedFiles.push(optimizedFile)
+      } catch (error) {
+        console.error('Error optimizing file:', error)
+        // If optimization fails, use original file
+        optimizedFiles.push(file)
+      }
+    }
+
+    setSelectedFiles(prev => [...prev, ...optimizedFiles])
   }
 
   const removeFile = (index: number) => {
@@ -412,7 +429,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       // Legacy categories (for old posts)
       general: '💬',
       educacion: '📚',
-      chisme: '👀',
+      noticia: '👀',
       amor: '💘',
       escandalo: '💥',
     }
@@ -427,7 +444,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       // Legacy categories (for old posts)
       general: 'bg-cyan-500 text-white',
       educacion: 'bg-green-500 text-white',
-      chisme: 'bg-pink-500 text-white',
+      noticia: 'bg-pink-500 text-white',
       amor: 'bg-rose-500 text-white',
       escandalo: 'bg-yellow-500 text-black',
     }
@@ -442,7 +459,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       // Legacy categories (for old posts)
       general: 'from-cyan-400 via-blue-500 to-purple-600',
       educacion: 'from-green-400 via-emerald-500 to-teal-600',
-      chisme: 'from-pink-400 via-fuchsia-500 to-purple-600',
+      noticia: 'from-pink-400 via-fuchsia-500 to-purple-600',
       amor: 'from-rose-400 via-pink-500 to-red-600',
       escandalo: 'from-yellow-400 via-orange-500 to-red-600',
     }
@@ -798,7 +815,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
                       <div key={index} className="rounded-xl overflow-hidden bg-gray-100 relative group">
                         {media.type.startsWith('image/') ? (
                           <>
-                            <img
+                            <LazyImage
                               src={media.url}
                               alt={`Imagen ${index + 1}`}
                               className="w-full h-auto object-contain cursor-pointer transition-transform duration-300 group-hover:scale-105"
@@ -1043,7 +1060,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
             <DialogTitle>Visor de imagen</DialogTitle>
           </DialogHeader>
           <div id="image-viewer-description" className="sr-only">
-            Imagen del chisme en tamaño completo
+            Imagen de la noticia en tamaño completo
           </div>
           <div className="relative w-full h-full flex items-center justify-center p-4">
             <Button
@@ -1069,7 +1086,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       <button
         onClick={() => token ? setIsDialogOpen(true) : onRequestAuth()}
         className="fixed bottom-6 right-6 w-16 h-16 rounded-full shadow-2xl bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-600 hover:from-yellow-500 hover:via-orange-600 hover:to-pink-700 text-white z-50 flex items-center justify-center transition-all duration-300 hover:scale-110 animate-pulse hover:animate-none border-4 border-white"
-        aria-label="Crear nuevo chisme"
+        aria-label="Crear nueva noticia"
       >
         <Plus className="w-8 h-8 drop-shadow-lg" />
       </button>
@@ -1083,6 +1100,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
           postId={editingPost.id}
           initialTitle={editingPost.title}
           initialContent={editingPost.content}
+          initialMediaFiles={editingPost.mediaFiles}
           token={token}
           onSuccess={(updatedPost) => {
             setNews(news.map(n => n.id === updatedPost.id ? { ...n, ...updatedPost } : n))

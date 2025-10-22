@@ -386,7 +386,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
 
   const getContentTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      news: 'Chisme',
+      news: 'Noticia',
       alert: 'Alerta',
       classified: 'Clasificado',
       forum: 'Conversación',

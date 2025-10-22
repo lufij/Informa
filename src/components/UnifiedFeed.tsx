@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 import { ScrollArea } from './ui/scroll-area'
-import { Flame, Megaphone, ShoppingBag, MessageSquare, Calendar, TrendingUp, Users, Clock, User, Eye, Heart } from 'lucide-react'
+import { Flame, Megaphone, ShoppingBag, MessageSquare, Calendar, TrendingUp, Users, Clock, User, Eye, Heart, Loader2 } from 'lucide-react'
 import { projectId, publicAnonKey } from '../utils/supabase/info'
 import { toast } from 'sonner'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion } from 'motion/react'
 import { UserAvatar } from './UserAvatar'
 
 interface FeedItem {
@@ -41,17 +41,59 @@ interface UnifiedFeedProps {
 export function UnifiedFeed({ token, userProfile, onNavigate }: UnifiedFeedProps) {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [filter, setFilter] = useState<'all' | 'following'>('all')
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  
+  const ITEMS_PER_PAGE = 10
 
+  // Reset feed when filter changes
   useEffect(() => {
-    fetchFeed()
+    setFeedItems([])
+    setPage(0)
+    setHasMore(true)
+    fetchFeed(0, true)
   }, [filter, token])
 
-  const fetchFeed = async () => {
-    setIsLoading(true)
+  // Setup infinite scroll observer
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect()
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+          loadMore()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current)
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [hasMore, isLoading, isLoadingMore, page])
+
+  const fetchFeed = async (pageNum: number = 0, reset: boolean = false) => {
+    if (reset) {
+      setIsLoading(true)
+    } else {
+      setIsLoadingMore(true)
+    }
+
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/feed?filter=${filter}`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/feed?filter=${filter}&limit=${ITEMS_PER_PAGE}&offset=${pageNum * ITEMS_PER_PAGE}`,
         {
           headers: {
             'Authorization': `Bearer ${token || publicAnonKey}`
@@ -61,23 +103,38 @@ export function UnifiedFeed({ token, userProfile, onNavigate }: UnifiedFeedProps
 
       if (response.ok) {
         const data = await response.json()
-        setFeedItems(data)
+        
+        if (reset) {
+          setFeedItems(data)
+        } else {
+          setFeedItems(prev => [...prev, ...data])
+        }
+        
+        // If we got fewer items than requested, we've reached the end
+        setHasMore(data.length === ITEMS_PER_PAGE)
       } else {
-        // Only show error if it's not a network issue
         if (response.status !== 0) {
           console.error('Error fetching feed:', response.status)
         }
       }
     } catch (error) {
-      // Silent fail for network errors - only log non-fetch errors
       if (error instanceof Error && !error.message.includes('fetch')) {
         console.error('Error fetching feed:', error)
-        toast.error('Error al cargar el feed')
+        if (reset) {
+          toast.error('Error al cargar el feed')
+        }
       }
     } finally {
       setIsLoading(false)
+      setIsLoadingMore(false)
     }
   }
+
+  const loadMore = useCallback(() => {
+    const nextPage = page + 1
+    setPage(nextPage)
+    fetchFeed(nextPage, false)
+  }, [page, filter, token])
 
   const getFeedIcon = (type: string) => {
     switch (type) {
@@ -98,7 +155,7 @@ export function UnifiedFeed({ token, userProfile, onNavigate }: UnifiedFeedProps
 
   const getFeedLabel = (type: string) => {
     const labels: Record<string, string> = {
-      news: 'Chisme',
+      news: 'Noticia',
       alert: 'Alerta',
       classified: 'Clasificado',
       event: 'Evento',
@@ -180,7 +237,7 @@ export function UnifiedFeed({ token, userProfile, onNavigate }: UnifiedFeedProps
 
       {/* Filter Tabs */}
       {token && (
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'following')}>
+        <Tabs value={filter} onValueChange={(v: string) => setFilter(v as 'all' | 'following')}>
           <TabsList className="w-full grid grid-cols-2">
             <TabsTrigger value="all" className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
@@ -218,105 +275,117 @@ export function UnifiedFeed({ token, userProfile, onNavigate }: UnifiedFeedProps
         </Card>
       ) : (
         <div className="space-y-4">
-          <AnimatePresence>
-            {feedItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card 
-                  className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-                  onClick={() => {
-                    if (onNavigate) {
-                      const sectionMap: Record<string, string> = {
-                        news: 'news',
-                        alert: 'alerts',
-                        classified: 'classifieds',
-                        event: 'classifieds',
-                        forum: 'forums'
-                      }
-                      onNavigate(sectionMap[item.feedType], item.id)
+          {feedItems.map((item, index) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: index < 5 ? index * 0.05 : 0 }}
+            >
+              <Card 
+                className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                onClick={() => {
+                  if (onNavigate) {
+                    const sectionMap: Record<string, string> = {
+                      news: 'news',
+                      alert: 'alerts',
+                      classified: 'classifieds',
+                      event: 'classifieds',
+                      forum: 'forums'
                     }
-                  }}
-                >
-                  {/* Type indicator strip */}
-                  <div className={`h-2 bg-gradient-to-r ${getFeedGradient(item.feedType)}`} />
-                  
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        {/* Type badge */}
-                        <div className="flex items-center gap-2 mb-2">
-                          {getFeedIcon(item.feedType)}
-                          <Badge className={`bg-gradient-to-r ${getFeedGradient(item.feedType)} text-white`}>
-                            {getFeedLabel(item.feedType).toUpperCase()}
+                    onNavigate(sectionMap[item.feedType], item.id)
+                  }
+                }}
+              >
+                {/* Type indicator strip */}
+                <div className={`h-2 bg-gradient-to-r ${getFeedGradient(item.feedType)}`} />
+                
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      {/* Type badge */}
+                      <div className="flex items-center gap-2 mb-2">
+                        {getFeedIcon(item.feedType)}
+                        <Badge className={`bg-gradient-to-r ${getFeedGradient(item.feedType)} text-white`}>
+                          {getFeedLabel(item.feedType).toUpperCase()}
+                        </Badge>
+                        {item.category && (
+                          <Badge variant="outline" className="text-xs">
+                            {item.category}
                           </Badge>
-                          {item.category && (
-                            <Badge variant="outline" className="text-xs text-[15px] font-[ADLaM_Display]">
-                              {item.category}
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        {/* Title */}
-                        <CardTitle className="text-xl mb-2 line-clamp-2">
-                          {getItemTitle(item)}
-                        </CardTitle>
-                        
-                        {/* Author info */}
-                        <div className="flex items-center gap-2 text-sm">
-                          <UserAvatar
-                            userId={getAuthorId(item)}
-                            userName={getAuthorName(item)}
-                            profilePhoto={getAuthorPhoto(item)}
-                            size="sm"
-                          />
-                          <span className="text-gray-600">{getAuthorName(item)}</span>
-                          <span className="text-gray-400">•</span>
-                          <Clock className="w-3 h-3 text-gray-400" />
-                          <span className="text-gray-500 text-xs">{formatTimeAgo(item.createdAt)}</span>
-                        </div>
+                        )}
+                      </div>
+                      
+                      {/* Title */}
+                      <CardTitle className="text-xl mb-2 line-clamp-2">
+                        {getItemTitle(item)}
+                      </CardTitle>
+                      
+                      {/* Author info */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <UserAvatar
+                          userId={getAuthorId(item)}
+                          userName={getAuthorName(item)}
+                          profilePhoto={getAuthorPhoto(item)}
+                          size="sm"
+                        />
+                        <span className="text-gray-600">{getAuthorName(item)}</span>
+                        <span className="text-gray-400">•</span>
+                        <Clock className="w-3 h-3 text-gray-400" />
+                        <span className="text-gray-500 text-xs">{formatTimeAgo(item.createdAt)}</span>
                       </div>
                     </div>
-                  </CardHeader>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="pt-0">
+                  {/* Content preview */}
+                  {getItemContent(item) && (
+                    <p className="text-gray-700 line-clamp-3 mb-3">
+                      {getItemContent(item)}
+                    </p>
+                  )}
                   
-                  <CardContent className="pt-0">
-                    {/* Content preview */}
-                    {getItemContent(item) && (
-                      <p className="text-gray-700 line-clamp-3 mb-3">
-                        {getItemContent(item)}
-                      </p>
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    {getTotalReactions(item) > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-4 h-4 text-pink-500" />
+                        <span>{getTotalReactions(item)}</span>
+                      </div>
                     )}
-                    
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      {getTotalReactions(item) > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Heart className="w-4 h-4 text-pink-500" />
-                          <span>{getTotalReactions(item)}</span>
-                        </div>
-                      )}
-                      {item.views && item.views > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-4 h-4 text-blue-500" />
-                          <span>{item.views}</span>
-                        </div>
-                      )}
-                      {item.shareCount && item.shareCount > 0 && (
-                        <div className="flex items-center gap-1">
-                          <TrendingUp className="w-4 h-4 text-green-500" />
-                          <span>{item.shareCount}</span>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                    {item.views && item.views > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Eye className="w-4 h-4 text-blue-500" />
+                        <span>{item.views}</span>
+                      </div>
+                    )}
+                    {item.shareCount && item.shareCount > 0 && (
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                        <span>{item.shareCount}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+          
+          {/* Load More Trigger */}
+          <div ref={loadMoreRef} className="py-4">
+            {isLoadingMore && (
+              <div className="flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+                <span className="ml-2 text-gray-500">Cargando más...</span>
+              </div>
+            )}
+            {!hasMore && feedItems.length > 0 && (
+              <div className="text-center text-gray-500 text-sm">
+                ✨ Has visto todo el contenido disponible
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

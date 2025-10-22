@@ -113,7 +113,7 @@ export function SavedPosts({ open, onOpenChange, token, onNavigate }: SavedPosts
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      news: 'Chisme',
+      news: 'Noticia',
       alert: 'Alerta',
       classified: 'Clasificado',
       forum: 'Conversación'

@@ -13,6 +13,8 @@ import { ProfilePhotoGuard } from './ProfilePhotoGuard'
 import { PostActions } from './PostActions'
 import { UserAvatar } from './UserAvatar'
 import { ImageViewer } from './ImageViewer'
+import { optimizeMediaFile } from '../utils/imageOptimization'
+import { LazyImage } from './LazyImage'
 
 interface MediaFile {
   url: string
@@ -140,7 +142,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
     }
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     
     // Validate file types
@@ -153,7 +155,20 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
       toast.error('Algunos archivos no son válidos. Solo se permiten imágenes y videos.')
     }
 
-    setSelectedFiles(prev => [...prev, ...validFiles])
+    // Optimize files before adding them
+    const optimizedFiles: File[] = []
+    for (const file of validFiles) {
+      try {
+        const optimized = await optimizeMediaFile(file)
+        const optimizedFile = new File([optimized], file.name, { type: optimized.type })
+        optimizedFiles.push(optimizedFile)
+      } catch (error) {
+        console.error('Error optimizing file:', error)
+        optimizedFiles.push(file)
+      }
+    }
+
+    setSelectedFiles(prev => [...prev, ...optimizedFiles])
   }
 
   const removeFile = (index: number) => {
@@ -975,7 +990,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                       <div key={`file-${idx}`} className="rounded-xl overflow-hidden bg-gray-100 relative group">
                         {media.type.startsWith('image/') ? (
                           <>
-                            <img
+                            <LazyImage
                               src={media.url}
                               alt={`Foto de alerta ${idx + 1}`}
                               className="w-full h-auto object-contain cursor-pointer transition-transform duration-300 group-hover:scale-105"

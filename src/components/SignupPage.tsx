@@ -178,7 +178,7 @@ export function SignupPage({ onSignupSuccess, onSwitchToLogin, embedded = false 
             </div>
           </div>
           <CardTitle className="text-center text-3xl bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-            ¡Únete al Chisme!
+            ¡Únete a Informa!
           </CardTitle>
           <CardDescription className="text-center text-base flex items-center justify-center gap-2">
             <Sparkles className="w-4 h-4" />
