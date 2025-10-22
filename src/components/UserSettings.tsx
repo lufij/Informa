@@ -97,15 +97,20 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
   }
 
   const startCamera = async () => {
+    console.log('🎥 Iniciando cámara...')
     setCameraError(null)
     setUseFileUpload(false)
+    setCapturedPhoto(null) // Reset captured photo
     
     try {
       // Check if mediaDevices is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error('❌ getUserMedia no soportado')
         throw new Error('UNSUPPORTED')
       }
 
+      console.log('📱 Solicitando permisos de cámara...')
+      
       // Request camera permissions with better error handling
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -116,13 +121,28 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
         audio: false
       })
       
+      console.log('✅ Permisos concedidos, configurando stream...')
+      
       setStream(mediaStream)
+      
+      // Wait for next tick to ensure state is updated
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
-        videoRef.current.play()
+        try {
+          await videoRef.current.play()
+          console.log('▶️ Video reproduciendo')
+        } catch (playError) {
+          console.error('Error al reproducir video:', playError)
+        }
+      } else {
+        console.warn('⚠️ videoRef.current no disponible')
       }
+      
       setIsCapturing(true)
       setCameraError(null)
+      console.log('✅ Cámara iniciada exitosamente')
       
     } catch (error: any) {
       console.error('Error al acceder a la cámara:', error)

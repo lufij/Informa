@@ -585,16 +585,70 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
                   📸 Fotos y Videos
                   <span className="text-xs text-pink-600">(opcional pero recomendado)</span>
                 </Label>
-                <div className="border-2 border-dashed border-pink-300 rounded-lg p-4 bg-pink-50/50 hover:bg-pink-50 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    multiple
-                    onChange={handleFileSelect}
-                    className="w-full text-sm cursor-pointer"
-                    capture="environment"
-                  />
-                  <p className="text-xs text-gray-600 mt-2">
+                <div className="border-2 border-dashed border-pink-300 rounded-lg p-4 bg-pink-50/50">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    {/* Botón: Tomar Foto */}
+                    <label className="flex flex-col items-center gap-2 p-3 border-2 border-pink-200 rounded-lg cursor-pointer hover:border-pink-400 hover:bg-pink-100 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <Image className="w-5 h-5 text-pink-600" />
+                        <span className="text-sm font-medium">📷 Tomar Foto</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        capture="environment"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                    
+                    {/* Botón: Grabar Video */}
+                    <label className="flex flex-col items-center gap-2 p-3 border-2 border-purple-200 rounded-lg cursor-pointer hover:border-purple-400 hover:bg-purple-100 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <Video className="w-5 h-5 text-purple-600" />
+                        <span className="text-sm font-medium">🎥 Grabar Video</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        capture="environment"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                    
+                    {/* Botón: Galería Fotos */}
+                    <label className="flex flex-col items-center gap-2 p-3 border-2 border-blue-200 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-100 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <Image className="w-5 h-5 text-blue-600" />
+                        <span className="text-sm font-medium">🖼️ Galería</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                    
+                    {/* Botón: Videos Guardados */}
+                    <label className="flex flex-col items-center gap-2 p-3 border-2 border-indigo-200 rounded-lg cursor-pointer hover:border-indigo-400 hover:bg-indigo-100 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <Video className="w-5 h-5 text-indigo-600" />
+                        <span className="text-sm font-medium">📹 Videos</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        multiple
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-600 text-center">
                     📱 ¡Una imagen vale más que mil palabras!
                   </p>
                 </div>

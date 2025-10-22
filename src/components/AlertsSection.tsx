@@ -737,10 +737,11 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                 {/* Fotos y videos */}
                 <div className="space-y-2">
                   <Label>Agregar fotos o videos (opcional)</Label>
-                  <div className="flex flex-wrap gap-2">
-                    <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors">
-                      <Image className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm">Fotos</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Tomar Foto */}
+                    <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-orange-300 rounded-lg cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-colors">
+                      <Image className="w-4 h-4 text-orange-600" />
+                      <span className="text-sm font-medium">📷 Tomar Foto</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -750,13 +751,41 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                         className="hidden"
                       />
                     </label>
-                    <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors">
-                      <Video className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm">Videos</span>
+                    
+                    {/* Grabar Video */}
+                    <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-red-300 rounded-lg cursor-pointer hover:border-red-500 hover:bg-red-50 transition-colors">
+                      <Video className="w-4 h-4 text-red-600" />
+                      <span className="text-sm font-medium">🎥 Grabar</span>
                       <input
                         type="file"
                         accept="video/*"
                         capture="environment"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                    
+                    {/* Galería de Fotos */}
+                    <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                      <Image className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium">🖼️ Galería</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                    
+                    {/* Videos Guardados */}
+                    <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-purple-300 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors">
+                      <Video className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm font-medium">📹 Videos</span>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        multiple
                         onChange={handleFileSelect}
                         className="hidden"
                       />
