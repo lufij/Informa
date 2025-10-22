@@ -3,7 +3,8 @@
   import App from "./App.tsx";
   import "./index.css";
 
-  // Register Service Worker for PWA
+  // Register Service Worker for PWA - TEMPORARILY DISABLED FOR DEBUGGING
+  /*
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/service-worker.js')
@@ -15,6 +16,7 @@
         });
     });
   }
+  */
 
   createRoot(document.getElementById("root")!).render(<App />);
   

@@ -1,12 +1,10 @@
-const CACHE_NAME = 'informa-v1.0.0';
+const CACHE_NAME = 'informa-v1.0.1';
 const RUNTIME_CACHE = 'informa-runtime-v1';
 const API_CACHE = 'informa-api-v1';
 
 // Assets to cache immediately
 const PRECACHE_URLS = [
   '/',
-  '/App.tsx',
-  '/styles/globals.css',
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
