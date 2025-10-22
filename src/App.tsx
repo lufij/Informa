@@ -1034,10 +1034,10 @@ export default function App() {
 
       <Toaster />
       
-      {/* Emergency Alert Banner */}
-      <Suspense fallback={null}>
+      {/* Emergency Alert Banner - TEMPORARILY DISABLED */}
+      {/* <Suspense fallback={null}>
         <EmergencyAlertBanner onViewAlert={handleViewEmergencyAlert} />
-      </Suspense>
+      </Suspense> */}
       
       {/* PWA Components */}
       <Suspense fallback={null}>
