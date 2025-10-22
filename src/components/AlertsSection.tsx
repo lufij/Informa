@@ -453,15 +453,13 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
       )
 
       if (response.ok) {
-        const updatedAlert = await response.json()
-        setAlerts(alerts.map(a => a.id === editingAlert.id ? updatedAlert : a))
         setIsEditDialogOpen(false)
         setEditingAlert(null)
         setEditDescription('')
         setEditMediaFiles([])
         setEditMediaPreviews([])
         toast.success('¡Emergencia actualizada!')
-        // Refresh alerts to ensure we have the latest data
+        // Refresh alerts to get the latest data from server
         await fetchAlerts()
       } else {
         const error = await response.json()
