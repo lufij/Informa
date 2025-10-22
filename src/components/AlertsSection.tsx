@@ -437,6 +437,13 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
       const existingMedia = editingAlert.mediaFiles || []
       const allMediaFiles = [...existingMedia, ...newMediaFiles]
 
+      console.log('Updating alert with:', {
+        description: editDescription,
+        existingMedia,
+        newMediaFiles,
+        allMediaFiles
+      })
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/alerts/${editingAlert.id}`,
         {
