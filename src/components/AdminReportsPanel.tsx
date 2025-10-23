@@ -532,20 +532,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent 
-          className="admin-panel-fullscreen w-screen h-screen max-w-none max-h-none flex flex-col bg-white p-4 overflow-hidden border-0 rounded-none"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw',
-            height: '100vh',
-            margin: 0,
-            transform: 'none'
-          }}
-        >
+        <DialogContent className="w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] flex flex-col bg-white p-6 overflow-hidden">
           <DialogHeader className="pb-4 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="bg-red-500 p-2 rounded-full">
