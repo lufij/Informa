@@ -532,43 +532,40 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[96vw] max-w-5xl h-[92vh] max-h-[92vh] flex flex-col bg-gradient-to-br from-white to-red-50 p-2 sm:p-4 overflow-hidden">
+        <DialogContent className="w-[95vw] max-w-4xl h-[85vh] max-h-[85vh] flex flex-col bg-white p-4 overflow-hidden">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 p-2 rounded-full">
-                <Shield className="w-5 h-5 text-white" />
+              <div className="bg-red-500 p-2 rounded-full">
+                <Shield className="w-4 h-4 text-white" />
               </div>
               <div>
-                <DialogTitle className="flex items-center gap-2">
+                <DialogTitle className="text-lg font-semibold">
                   Panel de Moderación
                   {pendingCount > 0 && (
-                    <Badge className="bg-red-500 text-white animate-pulse">
-                      {pendingCount} pendientes
+                    <Badge className="ml-2 bg-red-500 text-white">
+                      {pendingCount}
                     </Badge>
                   )}
                 </DialogTitle>
               </div>
             </div>
-            <DialogDescription>
-              Gestiona los reportes y acciones de moderación de la comunidad
+            <DialogDescription className="text-sm text-gray-600">
+              Gestiona reportes y usuarios
             </DialogDescription>
           </DialogHeader>
           
           {/* Main Tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col">
-            <TabsList className={`w-full grid ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} gap-1 h-auto p-1`}>
-              <TabsTrigger value="reports" className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" />
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col mt-4">
+            <TabsList className="grid grid-cols-3 w-full">
+              <TabsTrigger value="reports" className="text-sm">
                 Reportes ({reports.length})
               </TabsTrigger>
-              <TabsTrigger value="log" className="flex items-center gap-2">
-                <History className="w-4 h-4" />
+              <TabsTrigger value="log" className="text-sm">
                 Historial
               </TabsTrigger>
               {isAdmin && (
-                <TabsTrigger value="moderators" className="flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  Moderadores
+                <TabsTrigger value="moderators" className="text-sm">
+                  Usuarios
                 </TabsTrigger>
               )}
             </TabsList>
