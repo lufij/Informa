@@ -341,6 +341,15 @@ app.post('/make-server-3467f1c6/news', async (c) => {
     }
 
     await kv.set(`news:${newsId}`, newsItem)
+    
+    // 📢 Enviar notificación push a todos los usuarios
+    await sendMassPushNotification(
+      '📰 Nueva Noticia',
+      `${profile.name}: ${title.substring(0, 80)}${title.length > 80 ? '...' : ''}`,
+      { type: 'news', id: newsId },
+      'normal'
+    )
+    
     return c.json(newsItem)
   } catch (error) {
     console.log('Error creating news:', error)
@@ -756,6 +765,22 @@ app.post('/make-server-3467f1c6/alerts', async (c) => {
     }
 
     await kv.set(`alert:${alertId}`, alert)
+    
+    // 📢 Enviar notificación push a todos los usuarios
+    // Prioridad ALTA para bomberos o alertas de emergencia
+    const isFirefighterAlert = profile.role === 'firefighter' || profile.organization?.toLowerCase().includes('bombero')
+    const pushPriority = (isEmergency || isFirefighterAlert || priority === 'critica') ? 'high' : 'normal'
+    
+    const emoji = isFirefighterAlert ? '🚨' : (priority === 'critica' ? '⚠️' : '📢')
+    const titlePrefix = isFirefighterAlert ? 'EMERGENCIA - BOMBEROS' : (priority === 'critica' ? 'ALERTA CRÍTICA' : 'Nueva Alerta')
+    
+    await sendMassPushNotification(
+      `${emoji} ${titlePrefix}`,
+      `${title || message}`.substring(0, 100),
+      { type: 'alert', id: alertId },
+      pushPriority
+    )
+    
     return c.json(alert)
   } catch (error) {
     console.log('Error creating alert:', error)
@@ -1671,6 +1696,109 @@ async function createNotification(userId: string, type: string, data: any) {
   
   await kv.set(`notification:${userId}:${notificationId}`, notification)
   return notification
+}
+
+// ============================================
+// PUSH NOTIFICATIONS
+// ============================================
+
+// Subscribe to push notifications
+app.post('/make-server-3467f1c6/notifications/subscribe', async (c: any) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const subscription = await c.req.json()
+    
+    // Guardar suscripción del usuario
+    await kv.set(`push_subscription:${user.id}`, {
+      userId: user.id,
+      subscription,
+      createdAt: new Date().toISOString()
+    })
+
+    console.log(`✅ Usuario ${user.id} suscrito a push notifications`)
+    return c.json({ success: true })
+  } catch (error) {
+    console.log('Error subscribing to push:', error)
+    return c.json({ error: 'Error subscribing' }, 500)
+  }
+})
+
+// Unsubscribe from push notifications
+app.post('/make-server-3467f1c6/notifications/unsubscribe', async (c: Context) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    await kv.delete(`push_subscription:${user.id}`)
+    console.log(`❌ Usuario ${user.id} desuscrito de push notifications`)
+    return c.json({ success: true })
+  } catch (error) {
+    console.log('Error unsubscribing from push:', error)
+    return c.json({ error: 'Error unsubscribing' }, 500)
+  }
+})
+
+// Send push notification (internal function)
+async function sendPushNotification(userId: string, title: string, body: string, data: any = {}, priority: string = 'normal') {
+  try {
+    const subscriptionData = await kv.get(`push_subscription:${userId}`)
+    if (!subscriptionData || !subscriptionData.subscription) {
+      console.log(`No hay suscripción para usuario ${userId}`)
+      return
+    }
+
+    const webpush = await import('web-push')
+    
+    // VAPID keys
+    const vapidKeys = {
+      publicKey: 'BKSuCU38UwbReXe4F_CNB2EiJJYgHxdcG6SWfmUxPRD3nE_DxjPbWuCetgT8J9qAyh00rzTYr3mHfcbuP0l6WBE',
+      privateKey: 'cR7rcsGqnIGMxpknlzh_I90NKA5bzDjtTVGoJEDivlA'
+    }
+
+    webpush.setVapidDetails(
+      'mailto:informa@app.com',
+      vapidKeys.publicKey,
+      vapidKeys.privateKey
+    )
+
+    const payload = JSON.stringify({
+      title,
+      body,
+      data,
+      priority,
+      tag: `informa-${Date.now()}`
+    })
+
+    await webpush.sendNotification(subscriptionData.subscription, payload)
+    console.log(`✅ Push enviado a usuario ${userId}`)
+  } catch (error) {
+    console.log(`Error enviando push a ${userId}:`, error)
+    // Si falla (suscripción expirada), eliminar
+    await kv.delete(`push_subscription:${userId}`)
+  }
+}
+
+// Send mass push notification to all subscribed users
+async function sendMassPushNotification(title: string, body: string, data: any = {}, priority: string = 'normal') {
+  try {
+    const subscriptions = await kv.getByPrefix('push_subscription:')
+    console.log(`📢 Enviando notificación masiva a ${subscriptions.length} usuarios`)
+    
+    const promises = subscriptions.map(sub => 
+      sendPushNotification(sub.userId, title, body, data, priority)
+    )
+    
+    await Promise.allSettled(promises)
+    console.log(`✅ Notificación masiva enviada`)
+  } catch (error) {
+    console.log('Error en notificación masiva:', error)
+  }
 }
 
 // ============================================

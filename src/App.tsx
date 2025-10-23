@@ -100,14 +100,23 @@ export default function App() {
     }
     window.addEventListener('beforeinstallprompt', handleBeforeInstall)
     
-    // Request notification permissions cuando sea necesario (no inmediatamente)
-    // requestNotificationPermission() // Comentado para evitar bucles
-    
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
       clearTimeout(migrationTimeout)
     }
   }, []) // Sin dependencias para evitar re-ejecuciones
+  
+  // Auto-suscribir a push notifications cuando el usuario está autenticado
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      // Esperar 3 segundos después del login para pedir permisos
+      const timer = setTimeout(() => {
+        subscribeToPushNotifications()
+      }, 3000)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [isAuthenticated, token])
   
   // Request notification permissions
   const requestNotificationPermission = async () => {
@@ -142,35 +151,21 @@ export default function App() {
   // Subscribe to push notifications
   const subscribeToPushNotifications = async () => {
     try {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        const registration = await navigator.serviceWorker.ready
-        
-        // Check if already subscribed
-        const existingSubscription = await registration.pushManager.getSubscription()
-        if (existingSubscription) {
-          console.log('Ya suscrito a notificaciones push')
-          return
-        }
-        
-        // Subscribe to push notifications
-        // Note: You'll need to add your VAPID public key here
-        // const subscription = await registration.pushManager.subscribe({
-        //   userVisibleOnly: true,
-        //   applicationServerKey: 'YOUR_VAPID_PUBLIC_KEY'
-        // })
-        
-        // Send subscription to your server
-        // await fetch(`https://${projectId}.supabase.co/functions/v1/push-subscribe`, {
-        //   method: 'POST',
-        //   headers: {
-        //     'Authorization': `Bearer ${token}`,
-        //     'Content-Type': 'application/json'
-        //   },
-        //   body: JSON.stringify(subscription)
-        // })
-        
-        console.log('Push notifications configuradas (implementación pendiente)')
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.log('Push notifications no soportadas')
+        return
       }
+
+      const { requestNotificationPermission, subscribeToPushNotifications: subscribe } = await import('./utils/notificationService')
+      
+      const hasPermission = await requestNotificationPermission()
+      if (!hasPermission) {
+        console.log('Permisos de notificación denegados')
+        return
+      }
+
+      await subscribe(token || '')
+      console.log('✅ Suscrito a push notifications')
     } catch (error) {
       console.error('Error suscribiendo a push notifications:', error)
     }
