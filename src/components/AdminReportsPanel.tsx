@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
 import { ScrollArea } from './ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
-import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { AlertTriangle, X, Eye, Shield, Trash2, Ban, UserX, RefreshCw, History, AlertCircle } from 'lucide-react'
@@ -532,22 +531,22 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-6xl h-[90vh] max-h-[90vh] flex flex-col bg-white p-6 overflow-hidden">
-          <DialogHeader className="pb-4 flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="bg-red-500 p-2 rounded-full">
-                <Shield className="w-5 h-5 text-white" />
+        <DialogContent className="!w-screen !h-screen !max-w-none !top-0 !left-0 !translate-x-0 !translate-y-0 sm:!w-[95vw] sm:!h-[90vh] sm:!max-w-6xl sm:!max-h-[90vh] sm:!top-[50%] sm:!left-[50%] sm:!translate-x-[-50%] sm:!translate-y-[-50%] flex flex-col bg-white p-3 sm:p-6 overflow-hidden !rounded-none sm:!rounded-lg border-0 sm:border">
+          <DialogHeader className="pb-3 sm:pb-4 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="bg-red-500 p-1.5 sm:p-2 rounded-full">
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <div>
-                <DialogTitle className="text-xl font-semibold">
+              <div className="flex-1">
+                <DialogTitle className="text-lg sm:text-xl font-semibold">
                   Panel de Moderación
                   {pendingCount > 0 && (
-                    <Badge className="ml-2 bg-red-500 text-white">
+                    <Badge className="ml-2 bg-red-500 text-white text-xs">
                       {pendingCount}
                     </Badge>
                   )}
                 </DialogTitle>
-                <DialogDescription className="text-gray-600">
+                <DialogDescription className="text-sm sm:text-base text-gray-600">
                   Gestiona reportes y usuarios
                 </DialogDescription>
               </div>
@@ -555,51 +554,57 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
           </DialogHeader>
           
           {/* Main Tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col">
-            <TabsList className="grid grid-cols-3 w-full mb-4">
-              <TabsTrigger value="reports">
-                Reportes ({reports.length})
+          <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid grid-cols-3 w-full mb-2 sm:mb-4 h-auto">
+              <TabsTrigger value="reports" className="text-xs sm:text-sm py-2">
+                <span className="hidden sm:inline">Reportes ({reports.length})</span>
+                <span className="sm:hidden">Rep. ({reports.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="log">
-                Historial
+              <TabsTrigger value="log" className="text-xs sm:text-sm py-2">
+                <span className="hidden sm:inline">Historial</span>
+                <span className="sm:hidden">Hist.</span>
               </TabsTrigger>
               {isAdmin && (
-                <TabsTrigger value="moderators">
-                  Usuarios
+                <TabsTrigger value="moderators" className="text-xs sm:text-sm py-2">
+                  <span className="hidden sm:inline">Usuarios</span>
+                  <span className="sm:hidden">Users</span>
                 </TabsTrigger>
               )}
             </TabsList>
             
-            <TabsContent value="reports" className="flex-1 flex flex-col">
-              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full mb-4">
-                <TabsList className="w-full grid grid-cols-3">
-                  <TabsTrigger value="pending">
-                    Pendientes ({reports.filter(r => r.status === 'pending').length})
+            <TabsContent value="reports" className="flex-1 flex flex-col overflow-hidden">
+              <Tabs value={filter} onValueChange={(v: string) => setFilter(v as any)} className="w-full mb-2 sm:mb-4">
+                <TabsList className="w-full grid grid-cols-3 h-auto">
+                  <TabsTrigger value="pending" className="text-xs sm:text-sm py-1.5 sm:py-2 px-1">
+                    <span className="hidden sm:inline">Pendientes ({reports.filter(r => r.status === 'pending').length})</span>
+                    <span className="sm:hidden">Pend. ({reports.filter(r => r.status === 'pending').length})</span>
                   </TabsTrigger>
-                  <TabsTrigger value="reviewed">
-                    Revisados ({reports.filter(r => r.status !== 'pending').length})
+                  <TabsTrigger value="reviewed" className="text-xs sm:text-sm py-1.5 sm:py-2 px-1">
+                    <span className="hidden sm:inline">Revisados ({reports.filter(r => r.status !== 'pending').length})</span>
+                    <span className="sm:hidden">Rev. ({reports.filter(r => r.status !== 'pending').length})</span>
                   </TabsTrigger>
-                  <TabsTrigger value="all">
-                    Todos ({reports.length})
+                  <TabsTrigger value="all" className="text-xs sm:text-sm py-1.5 sm:py-2 px-1">
+                    <span className="hidden sm:inline">Todos ({reports.length})</span>
+                    <span className="sm:hidden">All ({reports.length})</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
 
-              <ScrollArea className="flex-1 pr-1 sm:pr-4 -mx-1 sm:mx-0">
+              <ScrollArea className="flex-1 pr-2 sm:pr-4">
                 {isLoading ? (
                   <div className="flex items-center justify-center h-32">
-                    <div className="text-gray-500">Cargando reportes...</div>
+                    <div className="text-sm sm:text-base text-gray-500">Cargando reportes...</div>
                   </div>
                 ) : Object.keys(groupedReports).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-32 text-center">
-                    <Shield className="w-12 h-12 text-gray-300 mb-2" />
-                    <p className="text-gray-500">No hay reportes</p>
-                    <p className="text-sm text-gray-400">
+                  <div className="flex flex-col items-center justify-center h-32 text-center px-4">
+                    <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mb-2" />
+                    <p className="text-sm sm:text-base text-gray-500">No hay reportes</p>
+                    <p className="text-xs sm:text-sm text-gray-400">
                       {filter === 'pending' ? 'No hay reportes pendientes' : 'Cambia el filtro para ver otros reportes'}
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-2 sm:space-y-4 mt-2 sm:mt-4">
+                  <div className="space-y-2 sm:space-y-3 pb-2">
                     <AnimatePresence>
                       {Object.entries(groupedReports).map(([contentKey, contentReports]) => {
                         const firstReport = contentReports[0]
@@ -639,35 +644,35 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                 }
                               }}
                             >
-                              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="flex-1 space-y-2">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <Badge variant="outline">
+                              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-4 pt-3 sm:pt-4">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 space-y-1.5 sm:space-y-2">
+                                    <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                                      <Badge variant="outline" className="text-xs px-1.5 py-0">
                                         {getContentTypeLabel(firstReport.contentType)}
                                       </Badge>
-                                      <Badge className="bg-red-500 text-white">
-                                        {reportCount} {reportCount === 1 ? 'reporte' : 'reportes'}
+                                      <Badge className="bg-red-500 text-white text-xs px-1.5 py-0">
+                                        {reportCount} {reportCount === 1 ? 'rep.' : 'reps.'}
                                       </Badge>
                                       {pendingReports > 0 && (
-                                        <Badge className="bg-orange-500 text-white">
-                                          {pendingReports} pendientes
+                                        <Badge className="bg-orange-500 text-white text-xs px-1.5 py-0">
+                                          {pendingReports} pend.
                                         </Badge>
                                       )}
                                       {content?.hidden && (
-                                        <Badge className="bg-orange-600 text-white">
-                                          ⚠️ Auto-ocultado
+                                        <Badge className="bg-orange-600 text-white text-xs px-1.5 py-0">
+                                          ⚠️ Oculto
                                         </Badge>
                                       )}
                                     </div>
                                     
                                     {/* Content Preview */}
                                     {content && (
-                                      <div className="bg-white/50 rounded p-3 border border-gray-200">
-                                        <p className="text-sm text-gray-800 mb-1 line-clamp-2">
+                                      <div className="bg-white/50 rounded p-2 sm:p-3 border border-gray-200">
+                                        <p className="text-xs sm:text-sm text-gray-800 mb-1 line-clamp-2 break-words">
                                           {getContentTitle(firstReport)}
                                         </p>
-                                        <p className="text-xs text-gray-500">
+                                        <p className="text-[10px] sm:text-xs text-gray-500">
                                           Por: {content.authorName || 'Desconocido'}
                                         </p>
                                       </div>
@@ -676,12 +681,14 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                     {/* Report Details */}
                                     <div className="space-y-1">
                                       {contentReports.slice(0, 3).map((report) => (
-                                        <div key={report.id} className="text-xs text-gray-600 flex items-start gap-2">
+                                        <div key={report.id} className="text-[11px] sm:text-xs text-gray-600 flex items-start gap-1.5 sm:gap-2">
                                           <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                                          <div className="flex-1">
+                                          <div className="flex-1 min-w-0">
                                             <span className="font-medium">{getReasonLabel(report.reason)}</span>
                                             {report.description && (
-                                              <span className="text-gray-500"> - {report.description}</span>
+                                              <span className="text-gray-500 block sm:inline sm:before:content-['-'] sm:before:mx-1 break-words">
+                                                {report.description}
+                                              </span>
                                             )}
                                             <div className="text-[10px] text-gray-400">
                                               {new Date(report.createdAt).toLocaleString('es-GT')}
@@ -690,67 +697,67 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                         </div>
                                       ))}
                                       {contentReports.length > 3 && (
-                                        <p className="text-xs text-gray-500 italic">
-                                          +{contentReports.length - 3} reportes más... (Haz clic para ver todos)
+                                        <p className="text-[10px] sm:text-xs text-gray-500 italic">
+                                          +{contentReports.length - 3} más...
                                         </p>
                                       )}
                                     </div>
                                   </div>
                                 </div>
                               </CardHeader>
-                              <CardContent>
-                                <div className="flex items-center gap-2 flex-wrap">
+                              <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4">
+                                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                   {/* Actions for pending reports */}
                                   {pendingReports > 0 && content && !content.hidden && (
                                     <>
                                       {/* Post Actions */}
                                       <Button
                                         size="sm"
-                                        onClick={(e) => {
+                                        onClick={(e: React.MouseEvent) => {
                                           e.stopPropagation()
                                           setDeleteDialog({ open: true, report: firstReport })
                                         }}
-                                        className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1"
+                                        className="bg-red-600 hover:bg-red-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
                                       >
-                                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
                                         <span className="hidden sm:inline">Eliminar Post</span>
                                       </Button>
                                       
                                       {/* User Moderation Actions */}
                                       <Button
                                         size="sm"
-                                        onClick={(e) => {
+                                        onClick={(e: React.MouseEvent) => {
                                           e.stopPropagation()
                                           setVetDialog({ open: true, report: firstReport })
                                         }}
-                                        className="bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-2 py-1"
+                                        className="bg-yellow-600 hover:bg-yellow-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
                                       >
-                                        <Ban className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                        <Ban className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
                                         <span className="hidden sm:inline">Vetar Usuario</span>
                                       </Button>
                                       
                                       <Button
                                         size="sm"
-                                        onClick={(e) => {
+                                        onClick={(e: React.MouseEvent) => {
                                           e.stopPropagation()
                                           setBlockDialog({ open: true, report: firstReport })
                                         }}
-                                        className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-1"
+                                        className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
                                       >
-                                        <UserX className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                        <UserX className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
                                         <span className="hidden sm:inline">Bloquear</span>
                                       </Button>
                                       
                                       {isAdmin && (
                                         <Button
                                           size="sm"
-                                          onClick={(e) => {
+                                          onClick={(e: React.MouseEvent) => {
                                             e.stopPropagation()
                                             setBanDialog({ open: true, report: firstReport })
                                           }}
-                                          className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-2 py-1"
+                                          className="bg-purple-600 hover:bg-purple-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
                                         >
-                                          <UserX className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                          <UserX className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
                                           <span className="hidden sm:inline">Banear</span>
                                         </Button>
                                       )}
@@ -758,14 +765,14 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                       {/* Other Actions */}
                                       <Button
                                         size="sm"
-                                        onClick={(e) => {
+                                        onClick={(e: React.MouseEvent) => {
                                           e.stopPropagation()
                                           contentReports.forEach(r => updateReportStatus(r.id, 'dismissed'))
                                         }}
                                         variant="outline"
-                                        className="text-xs px-2 py-1"
+                                        className="text-[10px] sm:text-xs px-2 py-1.5 h-auto"
                                       >
-                                        <X className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                        <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
                                         <span className="hidden sm:inline">Descartar</span>
                                       </Button>
                                     </>
@@ -775,13 +782,13 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                   {content?.hidden && (
                                     <Button
                                       size="sm"
-                                      onClick={(e) => {
+                                      onClick={(e: React.MouseEvent) => {
                                         e.stopPropagation()
                                         restorePost(firstReport)
                                       }}
-                                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1"
+                                      className="bg-green-600 hover:bg-green-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
                                     >
-                                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                      <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
                                       <span className="hidden sm:inline">Restaurar</span>
                                     </Button>
                                   )}
@@ -790,14 +797,14 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                   {pendingReports > 0 && (
                                     <Button
                                       size="sm"
-                                      onClick={(e) => {
+                                      onClick={(e: React.MouseEvent) => {
                                         e.stopPropagation()
                                         contentReports.forEach(r => updateReportStatus(r.id, 'reviewed'))
                                       }}
                                       variant="outline"
-                                      className="text-xs px-2 py-1"
+                                      className="text-[10px] sm:text-xs px-2 py-1.5 h-auto"
                                     >
-                                      <Eye className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                      <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
                                       <span className="hidden sm:inline">Revisado</span>
                                     </Button>
                                   )}
@@ -813,51 +820,51 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
               </ScrollArea>
             </TabsContent>
             
-            <TabsContent value="log" className="flex-1 flex flex-col mt-2 sm:mt-4">
-              <ScrollArea className="flex-1 pr-1 sm:pr-4 -mx-1 sm:mx-0">
+            <TabsContent value="log" className="flex-1 flex flex-col overflow-hidden">
+              <ScrollArea className="flex-1 pr-2 sm:pr-4">
                 {moderationLog.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-32 text-center">
-                    <History className="w-12 h-12 text-gray-300 mb-2" />
-                    <p className="text-gray-500">No hay historial de moderación</p>
+                  <div className="flex flex-col items-center justify-center h-32 text-center px-4">
+                    <History className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mb-2" />
+                    <p className="text-sm sm:text-base text-gray-500">No hay historial de moderación</p>
                   </div>
                 ) : (
-                  <div className="space-y-1.5 sm:space-y-2">
+                  <div className="space-y-2 pb-2">
                     {moderationLog.map((log) => (
                       <Card key={log.id} className="border-l-4 border-l-blue-500">
-                        <CardContent className="pt-3 sm:pt-4 px-3 sm:px-6 pb-3 sm:pb-6">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm">{getActionLabel(log.action)}</span>
+                        <CardContent className="pt-2.5 sm:pt-3 px-3 sm:px-4 pb-2.5 sm:pb-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                <span className="text-xs sm:text-sm">{getActionLabel(log.action)}</span>
                                 {log.contentType && (
-                                  <Badge variant="outline" className="text-xs">
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                                     {getContentTypeLabel(log.contentType)}
                                   </Badge>
                                 )}
                               </div>
                               
                               {log.contentTitle && (
-                                <p className="text-xs text-gray-700 mb-1">
+                                <p className="text-[11px] sm:text-xs text-gray-700 mb-1 line-clamp-1 break-words">
                                   "{log.contentTitle}"
                                 </p>
                               )}
                               
                               {log.targetUserName && (
-                                <p className="text-xs text-gray-700 mb-1">
+                                <p className="text-[11px] sm:text-xs text-gray-700 mb-1">
                                   Usuario: {log.targetUserName}
                                 </p>
                               )}
                               
                               {log.reason && (
-                                <p className="text-xs text-gray-600 mb-1">
+                                <p className="text-[11px] sm:text-xs text-gray-600 mb-1 line-clamp-2 break-words">
                                   Razón: {log.reason}
                                 </p>
                               )}
                               
-                              <div className="flex items-center gap-2 text-[10px] text-gray-500">
-                                <span>Por: {log.performedByName}</span>
-                                <span>•</span>
-                                <span>{new Date(log.performedAt).toLocaleString('es-GT')}</span>
+                              <div className="flex items-center gap-1.5 text-[10px] text-gray-500 flex-wrap">
+                                <span className="truncate">Por: {log.performedByName}</span>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="text-[9px] sm:text-[10px]">{new Date(log.performedAt).toLocaleString('es-GT')}</span>
                               </div>
                             </div>
                           </div>
@@ -871,16 +878,16 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
             
             {/* Moderators Tab - Admin Only */}
             {isAdmin && (
-              <TabsContent value="moderators" className="flex-1 flex flex-col mt-1 sm:mt-2 overflow-hidden">
+              <TabsContent value="moderators" className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex-1 overflow-hidden">
                   {isLoadingUsers ? (
                     <div className="flex items-center justify-center h-32">
-                      <div className="text-gray-500">Cargando usuarios...</div>
+                      <div className="text-sm sm:text-base text-gray-500">Cargando usuarios...</div>
                     </div>
                   ) : users.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-32 text-center">
-                      <Shield className="w-12 h-12 text-gray-300 mb-2" />
-                      <p className="text-gray-500">No hay usuarios</p>
+                    <div className="flex flex-col items-center justify-center h-32 text-center px-4">
+                      <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mb-2" />
+                      <p className="text-sm sm:text-base text-gray-500">No hay usuarios</p>
                     </div>
                   ) : (
                     <UserManagement
@@ -898,7 +905,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
       </Dialog>
       
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, report: null })}>
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open: boolean) => setDeleteDialog({ open, report: null })}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -935,7 +942,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
       </AlertDialog>
       
       {/* Ban Confirmation Dialog */}
-      <AlertDialog open={banDialog.open} onOpenChange={(open) => {
+      <AlertDialog open={banDialog.open} onOpenChange={(open: boolean) => {
         setBanDialog({ open, report: null })
         if (!open) setBanReason('')
       }}>
