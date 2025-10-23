@@ -532,67 +532,71 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-4xl h-[85vh] max-h-[85vh] flex flex-col bg-white p-4 overflow-hidden">
-          <DialogHeader>
+        <DialogContent className="w-[100vw] sm:w-[95vw] max-w-none sm:max-w-4xl h-[100vh] sm:h-[85vh] sm:max-h-[85vh] flex flex-col bg-white p-2 sm:p-4 overflow-hidden rounded-none sm:rounded-lg m-0 sm:m-auto">
+          <DialogHeader className="pb-2 sm:pb-4">
             <div className="flex items-center gap-2">
-              <div className="bg-red-500 p-2 rounded-full">
-                <Shield className="w-4 h-4 text-white" />
+              <div className="bg-red-500 p-1.5 sm:p-2 rounded-full">
+                <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
               </div>
-              <div>
-                <DialogTitle className="text-lg font-semibold">
+              <div className="flex-1">
+                <DialogTitle className="text-base sm:text-lg font-semibold">
                   Panel de Moderación
                   {pendingCount > 0 && (
-                    <Badge className="ml-2 bg-red-500 text-white">
+                    <Badge className="ml-1 sm:ml-2 bg-red-500 text-white text-xs">
                       {pendingCount}
                     </Badge>
                   )}
                 </DialogTitle>
               </div>
             </div>
-            <DialogDescription className="text-sm text-gray-600">
+            <DialogDescription className="text-xs sm:text-sm text-gray-600">
               Gestiona reportes y usuarios
             </DialogDescription>
           </DialogHeader>
           
           {/* Main Tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col mt-4">
-            <TabsList className="grid grid-cols-3 w-full">
-              <TabsTrigger value="reports" className="text-sm">
-                Reportes ({reports.length})
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col mt-2 sm:mt-4">
+            <TabsList className="grid grid-cols-3 w-full h-auto p-1">
+              <TabsTrigger value="reports" className="text-xs sm:text-sm px-2 py-2">
+                <span className="hidden sm:inline">Reportes</span>
+                <span className="sm:hidden">Rep.</span>
+                <span className="ml-1">({reports.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="log" className="text-sm">
-                Historial
+              <TabsTrigger value="log" className="text-xs sm:text-sm px-2 py-2">
+                <span className="hidden sm:inline">Historial</span>
+                <span className="sm:hidden">Hist.</span>
               </TabsTrigger>
               {isAdmin && (
-                <TabsTrigger value="moderators" className="text-sm">
-                  Usuarios
+                <TabsTrigger value="moderators" className="text-xs sm:text-sm px-2 py-2">
+                  <span className="hidden sm:inline">Usuarios</span>
+                  <span className="sm:hidden">Users</span>
                 </TabsTrigger>
               )}
             </TabsList>
             
-            <TabsContent value="reports" className="flex-1 flex flex-col mt-4">
+            <TabsContent value="reports" className="flex-1 flex flex-col mt-2 sm:mt-4">
               {/* Filters */}
-              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full">
-                <TabsList className="w-full grid grid-cols-3 gap-1 h-auto p-1">
-                  <TabsTrigger value="pending" className="px-2 py-2 text-xs sm:text-sm">
+              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full mb-3">
+                <TabsList className="w-full grid grid-cols-3 gap-0.5 sm:gap-1 h-auto p-0.5 sm:p-1">
+                  <TabsTrigger value="pending" className="px-1 sm:px-2 py-1.5 sm:py-2 text-xs">
                     <span className="hidden sm:inline">Pendientes</span>
                     <span className="sm:hidden">Pend.</span>
-                    <span className="ml-1">({reports.filter(r => r.status === 'pending').length})</span>
+                    <span className="ml-0.5 sm:ml-1 text-xs">({reports.filter(r => r.status === 'pending').length})</span>
                   </TabsTrigger>
-                  <TabsTrigger value="reviewed" className="px-2 py-2 text-xs sm:text-sm">
+                  <TabsTrigger value="reviewed" className="px-1 sm:px-2 py-1.5 sm:py-2 text-xs">
                     <span className="hidden sm:inline">Revisados</span>
                     <span className="sm:hidden">Rev.</span>
-                    <span className="ml-1">({reports.filter(r => r.status !== 'pending').length})</span>
+                    <span className="ml-0.5 sm:ml-1 text-xs">({reports.filter(r => r.status !== 'pending').length})</span>
                   </TabsTrigger>
-                  <TabsTrigger value="all" className="px-2 py-2 text-xs sm:text-sm">
+                  <TabsTrigger value="all" className="px-1 sm:px-2 py-1.5 sm:py-2 text-xs">
                     <span className="hidden sm:inline">Todos</span>
                     <span className="sm:hidden">All</span>
-                    <span className="ml-1">({reports.length})</span>
+                    <span className="ml-0.5 sm:ml-1 text-xs">({reports.length})</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
 
-              <ScrollArea className="flex-1 pr-4">
+              <ScrollArea className="flex-1 pr-1 sm:pr-4 -mx-1 sm:mx-0">
                 {isLoading ? (
                   <div className="flex items-center justify-center h-32">
                     <div className="text-gray-500">Cargando reportes...</div>
@@ -606,7 +610,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4 mt-4">
+                  <div className="space-y-2 sm:space-y-4 mt-2 sm:mt-4">
                     <AnimatePresence>
                       {Object.entries(groupedReports).map(([contentKey, contentReports]) => {
                         const firstReport = contentReports[0]
@@ -646,7 +650,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                 }
                               }}
                             >
-                              <CardHeader className="pb-3">
+                              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex-1 space-y-2">
                                     <div className="flex items-center gap-2 flex-wrap">
@@ -820,18 +824,18 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
               </ScrollArea>
             </TabsContent>
             
-            <TabsContent value="log" className="flex-1 flex flex-col mt-4">
-              <ScrollArea className="flex-1 pr-4">
+            <TabsContent value="log" className="flex-1 flex flex-col mt-2 sm:mt-4">
+              <ScrollArea className="flex-1 pr-1 sm:pr-4 -mx-1 sm:mx-0">
                 {moderationLog.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-32 text-center">
                     <History className="w-12 h-12 text-gray-300 mb-2" />
                     <p className="text-gray-500">No hay historial de moderación</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 sm:space-y-2">
                     {moderationLog.map((log) => (
                       <Card key={log.id} className="border-l-4 border-l-blue-500">
-                        <CardContent className="pt-4">
+                        <CardContent className="pt-3 sm:pt-4 px-3 sm:px-6 pb-3 sm:pb-6">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
@@ -878,7 +882,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
             
             {/* Moderators Tab - Admin Only */}
             {isAdmin && (
-              <TabsContent value="moderators" className="flex-1 flex flex-col mt-2 overflow-hidden">
+              <TabsContent value="moderators" className="flex-1 flex flex-col mt-1 sm:mt-2 overflow-hidden">
                 <div className="flex-1 overflow-hidden">
                   {isLoadingUsers ? (
                     <div className="flex items-center justify-center h-32">
