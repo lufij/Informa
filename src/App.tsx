@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { UserAvatar } from './components/UserAvatar'
 import { ContentSkeleton } from './components/ContentSkeleton'
 import { FixPhoneButton } from './components/FixPhoneButton'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // Lazy load componentes pesados
 const LoginPage = lazy(() => import('./components/LoginPage').then(m => ({ default: m.LoginPage })))
@@ -67,7 +68,7 @@ export default function App() {
     // Update page title
     document.title = 'Informa - Lo que está pasando ahora'
     
-    // Prevenir múltiples ejecuciones usando variable global
+    // Prevenir múltiples ejecuciones usando variable global mejorada
     if ((window as any).__INFORMA_INITIALIZED) {
       return
     }
@@ -89,7 +90,7 @@ export default function App() {
     
     // Diferir llamadas no críticas más tiempo para evitar sobrecarga
     const migrationTimeout = setTimeout(() => {
-      migrateFirefighterUser()
+      migrateFirefighterUser().catch(console.error)
     }, 5000) // Aumentado a 5 segundos
     
     // Listen for PWA install prompt
@@ -177,23 +178,26 @@ export default function App() {
   
   // Handle deep link navigation when user is already authenticated
   useEffect(() => {
-    if (isAuthenticated && deepLinkView && deepLinkId) {
-      const sectionMap = {
-        news: 'news',
-        alert: 'alerts',
-        classified: 'classifieds',
-        forum: 'forums'
-      }
-      setActiveTab(sectionMap[deepLinkView] as any)
-      setHighlightedItemId(deepLinkId)
-      setDeepLinkView(null)
-      setDeepLinkId(null)
-      setShowInstallBanner(false)
-      
-      toast.success('Te llevamos al contenido 👋', {
-        duration: 2000
-      })
+    if (!isAuthenticated || !deepLinkView || !deepLinkId) {
+      return
     }
+
+    const sectionMap = {
+      news: 'news',
+      alert: 'alerts',
+      classified: 'classifieds',
+      forum: 'forums'
+    }
+    
+    setActiveTab(sectionMap[deepLinkView] as any)
+    setHighlightedItemId(deepLinkId)
+    setDeepLinkView(null)
+    setDeepLinkId(null)
+    setShowInstallBanner(false)
+    
+    toast.success('Te llevamos al contenido 👋', {
+      duration: 2000
+    })
   }, [isAuthenticated, deepLinkView, deepLinkId])
   
   // const handleViewEmergencyAlert = (alertId: string) => {
@@ -289,14 +293,24 @@ export default function App() {
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return
     
+    // Prevenir múltiples llamadas simultáneas
+    if ((fetchUnreadCount as any).__fetching) {
+      return
+    }
+    (fetchUnreadCount as any).__fetching = true
+    
     try {
-      // Timeout para evitar esperas infinitas en móviles
+      // Timeout mejorado para evitar esperas infinitas en móviles
+      const controller = new AbortController()
+      setTimeout(() => controller.abort(), 5000)
+      
       const fetchPromise = fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/notifications`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
-          }
+          },
+          signal: controller.signal
         }
       )
       
@@ -314,28 +328,39 @@ export default function App() {
     } catch (error) {
       // Silent fail - no mostrar errores para evitar bucles
       console.log('Notification fetch skipped (timeout or error)')
+    } finally {
+      // Limpiar flag de fetching
+      (fetchUnreadCount as any).__fetching = false
     }
   }, [token]) // Memoizar con dependencia de token
 
-  // Poll for unread notifications (diferido)
+  // Poll for unread notifications (diferido y optimizado)
   useEffect(() => {
-    if (isAuthenticated && token) {
-      // Diferir primera carga de notificaciones 1 segundo
-      const initialTimeout = setTimeout(() => {
+    if (!isAuthenticated || !token) {
+      return
+    }
+    
+    // Prevenir múltiples efectos ejecutándose
+    let mounted = true
+    
+    // Diferir primera carga de notificaciones 1 segundo
+    const initialTimeout = setTimeout(() => {
+      if (mounted && navigator.onLine) {
         fetchUnreadCount()
-      }, 1000)
-      
-      // Polling cada 30 segundos
-      const interval = setInterval(() => {
-        if (navigator.onLine) {
-          fetchUnreadCount()
-        }
-      }, 30000)
-      
-      return () => {
-        clearTimeout(initialTimeout)
-        clearInterval(interval)
       }
+    }, 1000)
+    
+    // Polling cada 30 segundos con verificación de mounted
+    const interval = setInterval(() => {
+      if (mounted && navigator.onLine && isAuthenticated && token) {
+        fetchUnreadCount()
+      }
+    }, 30000)
+    
+    return () => {
+      mounted = false
+      clearTimeout(initialTimeout)
+      clearInterval(interval)
     }
   }, [isAuthenticated, token, fetchUnreadCount]) // Añadir fetchUnreadCount memoizado
 
@@ -343,7 +368,7 @@ export default function App() {
     try {
       const supabase = getSupabaseClient()
 
-      // Timeout para evitar esperas infinitas
+      // Timeout mejorado para evitar esperas infinitas
       const sessionPromise = supabase.auth.getSession()
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Session check timeout')), 10000)
@@ -408,8 +433,15 @@ export default function App() {
         .catch(error => {
           // Si falla el perfil, NO cerrar sesión para evitar bucles
           console.error('Error fetching profile (non-critical):', error)
-          // setIsAuthenticated(false) // Comentado para evitar bucles
-          // setToken(null) // Comentado para evitar bucles
+          // Fallback: crear un perfil mínimo para evitar errores en UI
+          if (!userProfile) {
+            setUserProfile({
+              id: 'temp',
+              name: 'Usuario',
+              phone: '',
+              role: 'user'
+            })
+          }
         })
       } else {
         setIsCheckingSession(false)
@@ -536,7 +568,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50">
       {/* Header - Mobile Optimized */}
       <header className="bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 sticky top-0 z-10 shadow-lg">
         <div className="w-full px-3 sm:px-4 py-3">
@@ -1082,6 +1115,7 @@ export default function App() {
           />
         )}
       </Suspense>
-    </div>
+      </div>
+    </ErrorBoundary>
   )
 }

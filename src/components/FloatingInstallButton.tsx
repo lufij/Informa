@@ -19,15 +19,18 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
     // Only run in browser
     if (typeof window === 'undefined') return
 
+    // Prevenir múltiples ejecuciones del efecto
+    let mounted = true
+
     // Detect iOS
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    setIsIOS(iOS)
+    if (mounted) setIsIOS(iOS)
 
     // Check if app is already installed (running in standalone mode)
     const installed = window.matchMedia('(display-mode: standalone)').matches ||
                      (window.navigator as any).standalone === true
 
-    setIsInstalled(installed)
+    if (mounted) setIsInstalled(installed)
 
     // Check if user dismissed the button
     const dismissed = localStorage.getItem('floatingInstallDismissed')
@@ -40,12 +43,18 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
     if (!installed && (!dismissed || Date.now() - dismissedTime > oneDayMs)) {
       // On iOS, always show (they can't auto-install via prompt)
       // On Android, show if we have the prompt OR after 3 seconds
-      if (iOS) {
-        setTimeout(() => setShowButton(true), 3000)
-      } else {
-        // Always show on Android after delay, even without deferredPrompt
-        setTimeout(() => setShowButton(true), 3000)
+      const timeoutId = setTimeout(() => {
+        if (mounted) setShowButton(true)
+      }, 3000)
+
+      return () => {
+        mounted = false
+        clearTimeout(timeoutId)
       }
+    }
+
+    return () => {
+      mounted = false
     }
   }, []) // Ejecutar solo una vez al montar el componente
 

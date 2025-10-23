@@ -6,7 +6,9 @@ import { Badge } from './ui/badge'
 import { ScrollArea } from './ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Input } from './ui/input'
-import { AlertTriangle, Check, X, Eye, Shield, Trash2, Ban, UserX, RefreshCw, History, AlertCircle, User } from 'lucide-react'
+import { Textarea } from './ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { AlertTriangle, X, Eye, Shield, Trash2, Ban, UserX, RefreshCw, History, AlertCircle } from 'lucide-react'
 import { projectId } from '../utils/supabase/info'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
@@ -21,7 +23,6 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from './ui/alert-dialog'
-import { Textarea } from './ui/textarea'
 
 interface Report {
   id: string
@@ -92,7 +93,12 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
   // Confirmation dialogs
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean, report: Report | null }>({ open: false, report: null })
   const [banDialog, setBanDialog] = useState<{ open: boolean, report: Report | null }>({ open: false, report: null })
+  const [vetDialog, setVetDialog] = useState<{ open: boolean, report: Report | null }>({ open: false, report: null })
+  const [blockDialog, setBlockDialog] = useState<{ open: boolean, report: Report | null }>({ open: false, report: null })
   const [banReason, setBanReason] = useState('')
+  const [vetReason, setVetReason] = useState('')
+  const [blockReason, setBlockReason] = useState('')
+  const [vetDuration, setVetDuration] = useState('7')
   
   const isAdmin = userProfile?.role === 'admin'
 
@@ -259,7 +265,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
 
       if (response.ok) {
         setReports(reports.map(r => 
-          r.id === reportId ? { ...r, status } : r
+          r.id === reportId ? { ...r, status: status as Report['status'] } : r
         ))
         toast.success('Estado actualizado')
       } else {
@@ -355,21 +361,107 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ reason: banReason })
+          body: JSON.stringify({ reason: banReason, type: 'permanent' })
         }
       )
 
       if (response.ok) {
-        toast.success('Usuario baneado exitosamente')
+        toast.success('Usuario baneado permanentemente')
         setBanDialog({ open: false, report: null })
         setBanReason('')
         await fetchModerationLog()
+        await fetchReports()
       } else {
         toast.error('Error al banear usuario')
       }
     } catch (error) {
       console.error('Error banning user:', error)
       toast.error('Error al banear usuario')
+    }
+  }
+  
+  const vetUser = async (report: Report) => {
+    if (!vetReason.trim()) {
+      toast.error('Debes proporcionar una razón para el vetado')
+      return
+    }
+    
+    try {
+      const content = contentDataMap[`${report.contentType}:${report.contentId}`]
+      if (!content) {
+        toast.error('No se encontró el contenido')
+        return
+      }
+      
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/users/${content.authorId}/vet`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            reason: vetReason, 
+            duration: parseInt(vetDuration),
+            type: 'temporary'
+          })
+        }
+      )
+
+      if (response.ok) {
+        toast.success(`Usuario vetado por ${vetDuration} días`)
+        setVetDialog({ open: false, report: null })
+        setVetReason('')
+        setVetDuration('7')
+        await fetchModerationLog()
+        await fetchReports()
+      } else {
+        toast.error('Error al vetar usuario')
+      }
+    } catch (error) {
+      console.error('Error vetting user:', error)
+      toast.error('Error al vetar usuario')
+    }
+  }
+  
+  const blockUser = async (report: Report) => {
+    if (!blockReason.trim()) {
+      toast.error('Debes proporcionar una razón para el bloqueo')
+      return
+    }
+    
+    try {
+      const content = contentDataMap[`${report.contentType}:${report.contentId}`]
+      if (!content) {
+        toast.error('No se encontró el contenido')
+        return
+      }
+      
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/users/${content.authorId}/block`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ reason: blockReason, type: 'block' })
+        }
+      )
+
+      if (response.ok) {
+        toast.success('Usuario bloqueado exitosamente')
+        setBlockDialog({ open: false, report: null })
+        setBlockReason('')
+        await fetchModerationLog()
+        await fetchReports()
+      } else {
+        toast.error('Error al bloquear usuario')
+      }
+    } catch (error) {
+      console.error('Error blocking user:', error)
+      toast.error('Error al bloquear usuario')
     }
   }
 
@@ -403,7 +495,10 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
       restore_post: '♻️ Publicación restaurada',
       block_user: '⏸️ Usuario bloqueado',
       ban_user: '🚫 Usuario baneado',
-      unban_user: '✅ Usuario desbaneado'
+      vet_user: '⚠️ Usuario vetado',
+      unban_user: '✅ Usuario desbaneado',
+      unvet_user: '✅ Usuario desvetado',
+      unblock_user: '✅ Usuario desbloqueado'
     }
     return labels[action] || action
   }
@@ -437,7 +532,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col bg-gradient-to-br from-white to-red-50">
+        <DialogContent className="w-[96vw] max-w-5xl h-[92vh] max-h-[92vh] flex flex-col bg-gradient-to-br from-white to-red-50 p-2 sm:p-4 overflow-hidden">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <div className="bg-gradient-to-r from-red-500 to-orange-500 p-2 rounded-full">
@@ -461,7 +556,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
           
           {/* Main Tabs */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col">
-            <TabsList className={`w-full grid ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            <TabsList className={`w-full grid ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} gap-1 h-auto p-1`}>
               <TabsTrigger value="reports" className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
                 Reportes ({reports.length})
@@ -481,15 +576,21 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
             <TabsContent value="reports" className="flex-1 flex flex-col mt-4">
               {/* Filters */}
               <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full">
-                <TabsList className="w-full grid grid-cols-3">
-                  <TabsTrigger value="pending">
-                    Pendientes ({reports.filter(r => r.status === 'pending').length})
+                <TabsList className="w-full grid grid-cols-3 gap-1 h-auto p-1">
+                  <TabsTrigger value="pending" className="px-2 py-2 text-xs sm:text-sm">
+                    <span className="hidden sm:inline">Pendientes</span>
+                    <span className="sm:hidden">Pend.</span>
+                    <span className="ml-1">({reports.filter(r => r.status === 'pending').length})</span>
                   </TabsTrigger>
-                  <TabsTrigger value="reviewed">
-                    Revisados ({reports.filter(r => r.status !== 'pending').length})
+                  <TabsTrigger value="reviewed" className="px-2 py-2 text-xs sm:text-sm">
+                    <span className="hidden sm:inline">Revisados</span>
+                    <span className="sm:hidden">Rev.</span>
+                    <span className="ml-1">({reports.filter(r => r.status !== 'pending').length})</span>
                   </TabsTrigger>
-                  <TabsTrigger value="all">
-                    Todos ({reports.length})
+                  <TabsTrigger value="all" className="px-2 py-2 text-xs sm:text-sm">
+                    <span className="hidden sm:inline">Todos</span>
+                    <span className="sm:hidden">All</span>
+                    <span className="ml-1">({reports.length})</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -612,17 +713,44 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                   {/* Actions for pending reports */}
                                   {pendingReports > 0 && content && !content.hidden && (
                                     <>
+                                      {/* Post Actions */}
                                       <Button
                                         size="sm"
                                         onClick={(e) => {
                                           e.stopPropagation()
                                           setDeleteDialog({ open: true, report: firstReport })
                                         }}
-                                        className="bg-red-600 hover:bg-red-700 text-white"
+                                        className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1"
                                       >
-                                        <Trash2 className="w-4 h-4 mr-1" />
-                                        Eliminar Post
+                                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                        <span className="hidden sm:inline">Eliminar Post</span>
                                       </Button>
+                                      
+                                      {/* User Moderation Actions */}
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setVetDialog({ open: true, report: firstReport })
+                                        }}
+                                        className="bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-2 py-1"
+                                      >
+                                        <Ban className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                        <span className="hidden sm:inline">Vetar Usuario</span>
+                                      </Button>
+                                      
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setBlockDialog({ open: true, report: firstReport })
+                                        }}
+                                        className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-1"
+                                      >
+                                        <UserX className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                        <span className="hidden sm:inline">Bloquear</span>
+                                      </Button>
+                                      
                                       {isAdmin && (
                                         <Button
                                           size="sm"
@@ -630,12 +758,14 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                             e.stopPropagation()
                                             setBanDialog({ open: true, report: firstReport })
                                           }}
-                                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                                          className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-2 py-1"
                                         >
-                                          <UserX className="w-4 h-4 mr-1" />
-                                          Banear Usuario
+                                          <UserX className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                          <span className="hidden sm:inline">Banear</span>
                                         </Button>
                                       )}
+                                      
+                                      {/* Other Actions */}
                                       <Button
                                         size="sm"
                                         onClick={(e) => {
@@ -643,9 +773,10 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                           contentReports.forEach(r => updateReportStatus(r.id, 'dismissed'))
                                         }}
                                         variant="outline"
+                                        className="text-xs px-2 py-1"
                                       >
-                                        <X className="w-4 h-4 mr-1" />
-                                        Descartar Todos
+                                        <X className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                        <span className="hidden sm:inline">Descartar</span>
                                       </Button>
                                     </>
                                   )}
@@ -658,10 +789,10 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                         e.stopPropagation()
                                         restorePost(firstReport)
                                       }}
-                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1"
                                     >
-                                      <RefreshCw className="w-4 h-4 mr-1" />
-                                      Restaurar Post
+                                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">Restaurar</span>
                                     </Button>
                                   )}
                                   
@@ -674,9 +805,10 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                         contentReports.forEach(r => updateReportStatus(r.id, 'reviewed'))
                                       }}
                                       variant="outline"
+                                      className="text-xs px-2 py-1"
                                     >
-                                      <Eye className="w-4 h-4 mr-1" />
-                                      Marcar Revisado
+                                      <Eye className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">Revisado</span>
                                     </Button>
                                   )}
                                 </div>
@@ -749,24 +881,26 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
             
             {/* Moderators Tab - Admin Only */}
             {isAdmin && (
-              <TabsContent value="moderators" className="flex-1 flex flex-col mt-4">
-                {isLoadingUsers ? (
-                  <div className="flex items-center justify-center h-32">
-                    <div className="text-gray-500">Cargando usuarios...</div>
-                  </div>
-                ) : users.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-32 text-center">
-                    <Shield className="w-12 h-12 text-gray-300 mb-2" />
-                    <p className="text-gray-500">No hay usuarios</p>
-                  </div>
-                ) : (
-                  <UserManagement
-                    users={users}
-                    currentUserProfile={userProfile}
-                    token={token}
-                    onUserUpdated={fetchUsers}
-                  />
-                )}
+              <TabsContent value="moderators" className="flex-1 flex flex-col mt-2 overflow-hidden">
+                <div className="flex-1 overflow-hidden">
+                  {isLoadingUsers ? (
+                    <div className="flex items-center justify-center h-32">
+                      <div className="text-gray-500">Cargando usuarios...</div>
+                    </div>
+                  ) : users.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-32 text-center">
+                      <Shield className="w-12 h-12 text-gray-300 mb-2" />
+                      <p className="text-gray-500">No hay usuarios</p>
+                    </div>
+                  ) : (
+                    <UserManagement
+                      users={users}
+                      currentUserProfile={userProfile}
+                      token={token}
+                      onUserUpdated={fetchUsers}
+                    />
+                  )}
+                </div>
               </TabsContent>
             )}
           </Tabs>
@@ -851,6 +985,130 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
               className="bg-purple-600 hover:bg-purple-700"
             >
               Sí, banear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Vet User Dialog */}
+      <AlertDialog open={vetDialog.open} onOpenChange={(open: boolean) => {
+        setVetDialog({ open, report: null })
+        if (!open) {
+          setVetReason('')
+          setVetDuration('7')
+        }
+      }}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Ban className="w-5 h-5 text-yellow-600" />
+              ¿Vetar usuario temporalmente?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>Esta acción vetará al usuario por un período específico.</p>
+              <p className="text-yellow-600">
+                ⚠️ El usuario no podrá publicar contenido durante el tiempo seleccionado.
+              </p>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm text-gray-700 block mb-2">
+                    Duración del vetado:
+                  </label>
+                  <Select value={vetDuration} onValueChange={setVetDuration}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar duración" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 día</SelectItem>
+                      <SelectItem value="3">3 días</SelectItem>
+                      <SelectItem value="7">7 días (1 semana)</SelectItem>
+                      <SelectItem value="14">14 días (2 semanas)</SelectItem>
+                      <SelectItem value="30">30 días (1 mes)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="text-sm text-gray-700 block mb-2">
+                    Razón del vetado (obligatorio):
+                  </label>
+                  <Textarea
+                    value={vetReason}
+                    onChange={(e) => setVetReason(e.target.value)}
+                    placeholder="Ej: Contenido inapropiado, incumplimiento de normas, etc."
+                    className="min-h-[80px]"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (vetDialog.report) {
+                  vetUser(vetDialog.report)
+                }
+              }}
+              disabled={!vetReason.trim()}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              Sí, vetar por {vetDuration} días
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Block User Dialog */}
+      <AlertDialog open={blockDialog.open} onOpenChange={(open: boolean) => {
+        setBlockDialog({ open, report: null })
+        if (!open) setBlockReason('')
+      }}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserX className="w-5 h-5 text-orange-600" />
+              ¿Bloquear usuario?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>Esta acción bloqueará al usuario <strong>indefinidamente</strong>.</p>
+              <p className="text-orange-600">
+                ⚠️ El usuario no podrá acceder hasta ser desbloqueado por un administrador.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-900">
+                  <strong>📝 Diferencias:</strong><br/>
+                  • <strong>Vetar:</strong> Suspensión temporal (1-30 días)<br/>
+                  • <strong>Bloquear:</strong> Suspensión indefinida<br/>
+                  • <strong>Banear:</strong> Eliminación permanente (solo admin)
+                </p>
+              </div>
+              <div className="mt-3">
+                <label className="text-sm text-gray-700 block mb-2">
+                  Razón del bloqueo (obligatorio):
+                </label>
+                <Textarea
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="Ej: Violación grave de normas, comportamiento tóxico repetido, etc."
+                  className="min-h-[80px]"
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (blockDialog.report) {
+                  blockUser(blockDialog.report)
+                }
+              }}
+              disabled={!blockReason.trim()}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              Sí, bloquear
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
