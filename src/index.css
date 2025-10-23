@@ -5861,3 +5861,31 @@ img::before {
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* Estilos para el panel de moderación fullscreen */
+[data-radix-popper-content-wrapper] {
+  position: fixed !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+}
+
+[data-radix-popper-content-wrapper] > div {
+  pointer-events: auto !important;
+}
+
+/* Sobrescribir estilos del Dialog cuando es el panel de moderación */
+.admin-panel-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  transform: none !important;
+}
