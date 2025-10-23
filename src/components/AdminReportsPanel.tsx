@@ -532,66 +532,58 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[100vw] sm:w-[95vw] max-w-none sm:max-w-4xl h-[100vh] sm:h-[85vh] sm:max-h-[85vh] flex flex-col bg-white p-2 sm:p-4 overflow-hidden rounded-none sm:rounded-lg m-0 sm:m-auto">
-          <DialogHeader className="pb-2 sm:pb-4">
-            <div className="flex items-center gap-2">
-              <div className="bg-red-500 p-1.5 sm:p-2 rounded-full">
-                <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-              </div>
-              <div className="flex-1">
-                <DialogTitle className="text-base sm:text-lg font-semibold">
-                  Panel de Moderación
-                  {pendingCount > 0 && (
-                    <Badge className="ml-1 sm:ml-2 bg-red-500 text-white text-xs">
-                      {pendingCount}
-                    </Badge>
-                  )}
-                </DialogTitle>
+        <DialogContent className="fixed inset-0 w-screen h-screen sm:w-[95vw] sm:max-w-4xl sm:h-[85vh] sm:max-h-[85vh] sm:relative sm:inset-auto flex flex-col bg-white p-3 sm:p-4 overflow-hidden border-0 sm:border rounded-none sm:rounded-lg m-0 sm:m-auto z-50">
+          <DialogHeader className="pb-3 sm:pb-4 flex-shrink-0">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2 flex-1">
+                <div className="bg-red-500 p-1.5 sm:p-2 rounded-full">
+                  <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <DialogTitle className="text-lg sm:text-xl font-semibold truncate">
+                    Panel de Moderación
+                    {pendingCount > 0 && (
+                      <Badge className="ml-2 bg-red-500 text-white text-xs">
+                        {pendingCount}
+                      </Badge>
+                    )}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-gray-600 mt-1">
+                    Gestiona reportes y usuarios
+                  </DialogDescription>
+                </div>
               </div>
             </div>
-            <DialogDescription className="text-xs sm:text-sm text-gray-600">
-              Gestiona reportes y usuarios
-            </DialogDescription>
           </DialogHeader>
           
           {/* Main Tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col mt-2 sm:mt-4">
-            <TabsList className="grid grid-cols-3 w-full h-auto p-1">
-              <TabsTrigger value="reports" className="text-xs sm:text-sm px-2 py-2">
-                <span className="hidden sm:inline">Reportes</span>
-                <span className="sm:hidden">Rep.</span>
-                <span className="ml-1">({reports.length})</span>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid grid-cols-3 w-full h-12 p-1 flex-shrink-0">
+              <TabsTrigger value="reports" className="text-sm sm:text-base px-2 py-2 h-full">
+                Reportes ({reports.length})
               </TabsTrigger>
-              <TabsTrigger value="log" className="text-xs sm:text-sm px-2 py-2">
-                <span className="hidden sm:inline">Historial</span>
-                <span className="sm:hidden">Hist.</span>
+              <TabsTrigger value="log" className="text-sm sm:text-base px-2 py-2 h-full">
+                Historial
               </TabsTrigger>
               {isAdmin && (
-                <TabsTrigger value="moderators" className="text-xs sm:text-sm px-2 py-2">
-                  <span className="hidden sm:inline">Usuarios</span>
-                  <span className="sm:hidden">Users</span>
+                <TabsTrigger value="moderators" className="text-sm sm:text-base px-2 py-2 h-full">
+                  Usuarios
                 </TabsTrigger>
               )}
             </TabsList>
             
-            <TabsContent value="reports" className="flex-1 flex flex-col mt-2 sm:mt-4">
+            <TabsContent value="reports" className="flex-1 flex flex-col min-h-0 mt-4">
               {/* Filters */}
-              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full mb-3">
-                <TabsList className="w-full grid grid-cols-3 gap-0.5 sm:gap-1 h-auto p-0.5 sm:p-1">
-                  <TabsTrigger value="pending" className="px-1 sm:px-2 py-1.5 sm:py-2 text-xs">
-                    <span className="hidden sm:inline">Pendientes</span>
-                    <span className="sm:hidden">Pend.</span>
-                    <span className="ml-0.5 sm:ml-1 text-xs">({reports.filter(r => r.status === 'pending').length})</span>
+              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full mb-4 flex-shrink-0">
+                <TabsList className="w-full grid grid-cols-3 h-10 p-1">
+                  <TabsTrigger value="pending" className="px-2 py-2 text-sm h-full">
+                    Pendientes ({reports.filter(r => r.status === 'pending').length})
                   </TabsTrigger>
-                  <TabsTrigger value="reviewed" className="px-1 sm:px-2 py-1.5 sm:py-2 text-xs">
-                    <span className="hidden sm:inline">Revisados</span>
-                    <span className="sm:hidden">Rev.</span>
-                    <span className="ml-0.5 sm:ml-1 text-xs">({reports.filter(r => r.status !== 'pending').length})</span>
+                  <TabsTrigger value="reviewed" className="px-2 py-2 text-sm h-full">
+                    Revisados ({reports.filter(r => r.status !== 'pending').length})
                   </TabsTrigger>
-                  <TabsTrigger value="all" className="px-1 sm:px-2 py-1.5 sm:py-2 text-xs">
-                    <span className="hidden sm:inline">Todos</span>
-                    <span className="sm:hidden">All</span>
-                    <span className="ml-0.5 sm:ml-1 text-xs">({reports.length})</span>
+                  <TabsTrigger value="all" className="px-2 py-2 text-sm h-full">
+                    Todos ({reports.length})
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
