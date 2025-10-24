@@ -294,6 +294,9 @@ app.post('/make-server-3467f1c6/upload', async (c) => {
   }
 })
 
+// 🚀 TEMPORAL: Multiplicador de reacciones para motivar usuarios (cambiar a 1 para volver a normal)
+const REACTION_MULTIPLIER = 5
+
 // News routes
 app.get('/make-server-3467f1c6/news', async (c) => {
   try {
@@ -379,7 +382,8 @@ app.post('/make-server-3467f1c6/news/:id/react', async (c) => {
     }
 
     if (reaction in news.reactions) {
-      news.reactions[reaction] = (news.reactions[reaction] || 0) + 1
+      // 🚀 TEMPORAL: Aplicar multiplicador (cambiar REACTION_MULTIPLIER a 1 para volver a normal)
+      news.reactions[reaction] = (news.reactions[reaction] || 0) + REACTION_MULTIPLIER
     }
 
     await kv.set(`news:${newsId}`, news)
@@ -888,7 +892,8 @@ app.post('/make-server-3467f1c6/alerts/:id/react', async (c) => {
 
     // Increment reaction count
     if (reaction in alert.reactions) {
-      alert.reactions[reaction]++
+      // 🚀 TEMPORAL: Aplicar multiplicador (cambiar REACTION_MULTIPLIER a 1 para volver a normal)
+      alert.reactions[reaction] += REACTION_MULTIPLIER
     }
 
     await kv.set(`alert:${alertId}`, alert)

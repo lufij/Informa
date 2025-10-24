@@ -29,6 +29,35 @@ export function ImageViewer({ imageUrl, onClose, altText = 'Imagen' }: ImageView
     setPosition({ x: 0, y: 0 })
   }, [imageUrl])
 
+  // Handle browser back button to close image viewer
+  useEffect(() => {
+    if (!imageUrl) return
+
+    // Add history entry when image opens
+    const historyEntry = { imageViewer: true }
+    window.history.pushState(historyEntry, '', window.location.href)
+
+    const handlePopState = (event: PopStateEvent) => {
+      // If back button pressed while image is open, close it
+      if (imageUrl) {
+        event.preventDefault()
+        onClose()
+        // Push the state back to prevent app from closing
+        window.history.pushState(historyEntry, '', window.location.href)
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      // Remove the history entry when component unmounts
+      if (window.history.state && window.history.state.imageViewer) {
+        window.history.back()
+      }
+    }
+  }, [imageUrl, onClose])
+
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev + 0.5, 5))
   }
