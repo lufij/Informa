@@ -39,11 +39,11 @@ export function ImageViewer({ imageUrl, onClose, altText = 'Imagen' }: ImageView
 
     const handlePopState = (event: PopStateEvent) => {
       // If back button pressed while image is open, close it
-      if (imageUrl) {
+      if (imageUrl && window.history.state?.imageViewer) {
         event.preventDefault()
+        event.stopPropagation()
         onClose()
-        // Push the state back to prevent app from closing
-        window.history.pushState(historyEntry, '', window.location.href)
+        return false
       }
     }
 
@@ -51,9 +51,9 @@ export function ImageViewer({ imageUrl, onClose, altText = 'Imagen' }: ImageView
 
     return () => {
       window.removeEventListener('popstate', handlePopState)
-      // Remove the history entry when component unmounts
-      if (window.history.state && window.history.state.imageViewer) {
-        window.history.back()
+      // Clean up history state when closing
+      if (window.history.state?.imageViewer) {
+        window.history.go(-1)
       }
     }
   }, [imageUrl, onClose])
