@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
-import { Bookmark, Share2, Flag, Edit, Copy, Check, MessageCircle, Phone } from 'lucide-react'
+import { Bookmark, Share2, Flag, Edit, Copy, Check, MessageCircle, Phone, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
 import { Textarea } from './ui/textarea'
 import { Label } from './ui/label'
@@ -13,14 +13,16 @@ interface PostActionsProps {
   postId: string
   token: string | null
   isAuthor?: boolean
+  isAdmin?: boolean       // Nueva prop para identificar admins
   onEdit?: () => void
+  onDelete?: () => void   // Nueva prop para manejar eliminación
   className?: string
   contactPhone?: string  // Número de contacto para clasificados
   recipientId?: string   // ID del usuario destinatario
   recipientName?: string // Nombre del destinatario
 }
 
-export function PostActions({ postType, postId, token, isAuthor, onEdit, className = '', contactPhone, recipientId, recipientName }: PostActionsProps) {
+export function PostActions({ postType, postId, token, isAuthor, isAdmin, onEdit, onDelete, className = '', contactPhone, recipientId, recipientName }: PostActionsProps) {
   const [isSaved, setIsSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showReportDialog, setShowReportDialog] = useState(false)
@@ -348,6 +350,19 @@ export function PostActions({ postType, postId, token, isAuthor, onEdit, classNa
           >
             <Edit className="w-3.5 h-3.5 mr-0.5" />
             <span className="text-[11px]">Editar</span>
+          </Button>
+        )}
+
+        {/* Delete Button (only for admins and forum authors) */}
+        {(isAdmin || isAuthor) && onDelete && postType === 'forum' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDelete}
+            className="text-xs text-gray-600 hover:text-red-700 h-8 px-2"
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-0.5" />
+            <span className="text-[11px]">Eliminar</span>
           </Button>
         )}
 

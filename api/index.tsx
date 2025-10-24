@@ -343,12 +343,14 @@ app.post('/make-server-3467f1c6/news', async (c) => {
     await kv.set(`news:${newsId}`, newsItem)
     
     // 📢 Enviar notificación push a todos los usuarios
+    console.log(`🔔 Enviando notificación push por nueva noticia: ${title}`)
     await sendMassPushNotification(
       '📰 Nueva Noticia',
       `${profile.name}: ${title.substring(0, 80)}${title.length > 80 ? '...' : ''}`,
       { type: 'news', id: newsId },
       'normal'
     )
+    console.log(`✅ Notificación push de noticia enviada`)
     
     return c.json(newsItem)
   } catch (error) {
@@ -1191,6 +1193,60 @@ app.delete('/make-server-3467f1c6/forums/:forumId/posts/:postId', async (c) => {
   }
 })
 
+// DELETE Forum - Admin or Author can delete entire forum
+app.delete('/make-server-3467f1c6/forums/:forumId', async (c: any) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'No autorizado' }, 401)
+    }
+
+    const profile = await getUserProfile(user.id)
+    const forumId = c.req.param('forumId')
+    const forum = await kv.get(`forum:${forumId}`)
+    
+    if (!forum) {
+      return c.json({ error: 'Foro no encontrado' }, 404)
+    }
+
+    // Check permissions: admin or forum author
+    if (profile.role !== 'admin' && forum.authorId !== user.id) {
+      return c.json({ error: 'No tienes permiso para eliminar este foro' }, 403)
+    }
+
+    // Delete all posts in the forum
+    const forumPosts = await kv.getByPrefix(`forum_post:${forumId}:`)
+    for (const post of forumPosts) {
+      await kv.del(`forum_post:${forumId}:${post.id}`)
+    }
+
+    // Delete the forum itself
+    await kv.del(`forum:${forumId}`)
+
+    // Log moderation action if admin
+    if (profile.role === 'admin') {
+      const logId = crypto.randomUUID()
+      await kv.set(`moderation_log:${logId}`, {
+        id: logId,
+        action: 'delete_post',
+        contentType: 'forum',
+        contentId: forumId,
+        contentTitle: forum.topic,
+        reason: 'Eliminado por administrador',
+        performedAt: new Date().toISOString(),
+        performedBy: user.id,
+        performedByName: profile.name
+      })
+    }
+
+    console.log(`Forum ${forumId} deleted successfully by ${profile.name}`)
+    return c.json({ success: true, message: 'Foro eliminado correctamente' })
+  } catch (error) {
+    console.error('Error deleting forum:', error)
+    return c.json({ error: 'Error al eliminar el foro' }, 500)
+  }
+})
+
 // Comments routes for News
 app.get('/make-server-3467f1c6/news/:id/comments', async (c) => {
   try {
@@ -1713,13 +1769,14 @@ app.post('/make-server-3467f1c6/notifications/subscribe', async (c: any) => {
     const subscription = await c.req.json()
     
     // Guardar suscripción del usuario
-    await kv.set(`push_subscription:${user.id}`, {
+    const subscriptionData = {
       userId: user.id,
       subscription,
       createdAt: new Date().toISOString()
-    })
-
-    console.log(`✅ Usuario ${user.id} suscrito a push notifications`)
+    }
+    
+    await kv.set(`push_subscription:${user.id}`, subscriptionData)
+    console.log(`✅ Usuario ${user.id} suscrito a push notifications:`, JSON.stringify(subscription, null, 2))
     return c.json({ success: true })
   } catch (error) {
     console.log('Error subscribing to push:', error)
@@ -1747,11 +1804,13 @@ app.post('/make-server-3467f1c6/notifications/unsubscribe', async (c: Context) =
 // Send push notification (internal function)
 async function sendPushNotification(userId: string, title: string, body: string, data: any = {}, priority: string = 'normal') {
   try {
+    console.log(`🔍 Buscando suscripción para usuario: ${userId}`)
     const subscriptionData = await kv.get(`push_subscription:${userId}`)
     if (!subscriptionData || !subscriptionData.subscription) {
-      console.log(`No hay suscripción para usuario ${userId}`)
+      console.log(`❌ No hay suscripción para usuario ${userId}`)
       return
     }
+    console.log(`✅ Suscripción encontrada para usuario ${userId}`)
 
     const webpush = await import('web-push')
     
@@ -1787,17 +1846,27 @@ async function sendPushNotification(userId: string, title: string, body: string,
 // Send mass push notification to all subscribed users
 async function sendMassPushNotification(title: string, body: string, data: any = {}, priority: string = 'normal') {
   try {
+    console.log(`🔄 Iniciando notificación masiva: "${title}" - "${body}"`)
     const subscriptions = await kv.getByPrefix('push_subscription:')
     console.log(`📢 Enviando notificación masiva a ${subscriptions.length} usuarios`)
     
-    const promises = subscriptions.map(sub => 
-      sendPushNotification(sub.userId, title, body, data, priority)
-    )
+    if (subscriptions.length === 0) {
+      console.log('❌ No hay usuarios suscritos a notificaciones push')
+      return
+    }
     
-    await Promise.allSettled(promises)
-    console.log(`✅ Notificación masiva enviada`)
+    const promises = subscriptions.map(subscriptionData => {
+      console.log(`📤 Enviando a usuario: ${subscriptionData.userId}`)
+      return sendPushNotification(subscriptionData.userId, title, body, data, priority)
+    })
+    
+    const results = await Promise.allSettled(promises)
+    const successful = results.filter(r => r.status === 'fulfilled').length
+    const failed = results.filter(r => r.status === 'rejected').length
+    
+    console.log(`✅ Notificación masiva completada: ${successful} exitosas, ${failed} fallidas`)
   } catch (error) {
-    console.log('Error en notificación masiva:', error)
+    console.log('❌ Error en notificación masiva:', error)
   }
 }
 

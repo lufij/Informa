@@ -485,13 +485,47 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
             {/* Post Actions for Forum */}
             <div className="border-t-2 border-gray-100 pt-3 mt-4">
               <PostActions
-                postType="news"
+                postType="forum"
                 postId={selectedForum.id}
                 token={token}
                 isAuthor={selectedForum.authorId === userProfile?.id}
+                isAdmin={userProfile?.role === 'admin'}
                 onEdit={() => {
                   setEditingForum(selectedForum)
                   setShowEditDialog(true)
+                }}
+                onDelete={async () => {
+                  const confirmed = window.confirm(
+                    '¿Estás seguro que deseas eliminar este foro? Esta acción no se puede deshacer y eliminará todos los posts asociados.'
+                  )
+                  if (!confirmed) return
+
+                  try {
+                    const response = await fetch(
+                      `${projectId}/make-server-3467f1c6/forums/${selectedForum.id}`,
+                      {
+                        method: 'DELETE',
+                        headers: {
+                          'Authorization': `Bearer ${token}`
+                        }
+                      }
+                    )
+
+                    const data = await response.json()
+                    
+                    if (!response.ok) {
+                      throw new Error(data.error || 'Error al eliminar el foro')
+                    }
+
+                    toast.success('Foro eliminado exitosamente')
+                    setSelectedForum(null)
+                    
+                    // Actualizar lista de foros
+                    setForums(prevForums => prevForums.filter(f => f.id !== selectedForum.id))
+                  } catch (error: any) {
+                    console.error('Error al eliminar foro:', error)
+                    toast.error(error.message || 'Error al eliminar el foro')
+                  }
                 }}
                 className="justify-end"
               />
@@ -529,7 +563,7 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
                 {/* Post Actions */}
                 <div className="border-t-2 border-gray-100 pt-3 mt-3">
                   <PostActions
-                    postType="news"
+                    postType="forum"
                     postId={post.id}
                     token={token}
                     isAuthor={post.userId === userProfile?.id}
