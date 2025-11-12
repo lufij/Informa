@@ -1,0 +1,201 @@
+📦 LISTA DE ARCHIVOS PARA DESCARGAR Y ACTUALIZAR EN TU PROYECTO
+
+==============================================================================
+✨ ARCHIVOS NUEVOS (Copiar completos a tu proyecto)
+==============================================================================
+
+1. /components/PushNotificationManager.tsx
+   ➜ Sistema que pide permiso para notificaciones push
+   ➜ Diálogo bonito con gradientes
+   ➜ Registra Service Worker
+   
+2. /components/NewContentBadge.tsx
+   ➜ Badge rojo con contador (ej: "5")
+   ➜ Aparece en los tabs
+   ➜ Con animación
+   
+3. /components/NewContentBanner.tsx
+   ➜ Banner superior "🔥 5 noticias nuevas - Ver ahora"
+   ➜ Con animación desde arriba
+   ➜ Responsive
+   
+4. /public/service-worker.js
+   ➜ Permite notificaciones con app cerrada
+   ➜ Maneja clicks en notificaciones
+   ➜ Background sync
+   
+5. /INSTRUCCIONES_INSTALACION.md
+   ➜ Guía completa de instalación
+   ➜ Troubleshooting
+   ➜ Tips y personalización
+   
+6. /RESUMEN_CAMBIOS.md
+   ➜ Documentación técnica
+   ➜ Estructura de datos
+   ➜ Flujo de notificaciones
+
+==============================================================================
+🔄 ARCHIVOS MODIFICADOS (Reemplazar en tu proyecto)
+==============================================================================
+
+1. /App.tsx
+   ➜ Agregado: imports de nuevos componentes
+   ➜ Agregado: estados para tracking de contenido nuevo
+   ➜ Agregado: función checkNewContent()
+   ➜ Agregado: badges en tabs
+   ➜ Agregado: NewContentBanner y PushNotificationManager al final
+   
+2. /supabase/functions/server/index.tsx
+   ➜ Agregado: función getCategoryName()
+   ➜ Agregado: push notification al crear noticia importante
+   ➜ Agregado: push notification al crear alerta crítica
+   ➜ Agregado: endpoint POST /notifications/subscribe-push
+   ➜ Agregado: endpoint POST /notifications/unsubscribe-push
+   ➜ Agregado: funciones sendPushNotification() y broadcastPushNotification()
+
+==============================================================================
+🎨 ARCHIVOS QUE DEBES CREAR (Iconos para notificaciones)
+==============================================================================
+
+❗ IMPORTANTE: Estos NO están incluidos porque son imágenes binarias
+
+1. /public/icon-192.png
+   ➜ Logo de Informa en 192x192 píxeles
+   ➜ Formato: PNG con fondo
+   ➜ Sugerencia: Usa el logo circular actual
+   ➜ Herramienta: https://www.iloveimg.com/resize-image
+   
+2. /public/icon-96.png
+   ➜ Logo de Informa en 96x96 píxeles
+   ➜ Formato: PNG con fondo
+   ➜ Sugerencia: Redimensiona el mismo logo
+   ➜ Herramienta: https://www.iloveimg.com/resize-image
+
+💡 TIP: Si no tienes logo aún, usa temporalmente:
+   https://via.placeholder.com/192x192/FF69B4/FFFFFF?text=I
+   (Descarga y guarda como icon-192.png)
+
+==============================================================================
+📝 PASOS PARA ACTUALIZAR TU PROYECTO EN VS CODE
+==============================================================================
+
+1. DESCARGAR ARCHIVOS NUEVOS
+   ✓ Descarga los 4 archivos de /components/
+   ✓ Descarga el service-worker.js de /public/
+   ✓ Descarga los 2 archivos .md de documentación
+
+2. REEMPLAZAR ARCHIVOS MODIFICADOS
+   ✓ Reemplaza /App.tsx con la nueva versión
+   ✓ Reemplaza /supabase/functions/server/index.tsx con la nueva versión
+
+3. CREAR ICONOS
+   ✓ Crea icon-192.png y guárdalo en /public/
+   ✓ Crea icon-96.png y guárdalo en /public/
+
+4. VERIFICAR ESTRUCTURA
+   Tu proyecto debe verse así:
+   
+   /
+   ├── App.tsx                              ← MODIFICADO
+   ├── components/
+   │   ├── PushNotificationManager.tsx      ← NUEVO
+   │   ├── NewContentBadge.tsx              ← NUEVO
+   │   ├── NewContentBanner.tsx             ← NUEVO
+   │   └── (otros componentes existentes)
+   ├── public/
+   │   ├── service-worker.js                ← NUEVO
+   │   ├── icon-192.png                     ← CREAR
+   │   └── icon-96.png                      ← CREAR
+   ├── supabase/
+   │   └── functions/
+   │       └── server/
+   │           └── index.tsx                ← MODIFICADO
+   ├── INSTRUCCIONES_INSTALACION.md         ← NUEVO (opcional)
+   └── RESUMEN_CAMBIOS.md                   ← NUEVO (opcional)
+
+5. INSTALAR DEPENDENCIAS (si no lo hiciste)
+   npm install
+   
+6. INICIAR SERVIDOR DE DESARROLLO
+   npm run dev
+
+7. PROBAR
+   ✓ Abre http://localhost:5173
+   ✓ Haz login
+   ✓ Espera 3 segundos
+   ✓ Debe aparecer diálogo de notificaciones
+   ✓ Acepta permiso
+   ✓ Debe llegar notificación de prueba
+
+==============================================================================
+🔍 CÓMO VERIFICAR QUE TODO ESTÁ BIEN
+==============================================================================
+
+En el navegador (Chrome/Edge/Firefox):
+
+1. Abre DevTools (F12)
+
+2. Console:
+   ✓ No debe haber errores rojos
+   ✓ Debe ver: "🔧 Service Worker instalado"
+   ✓ Debe ver: "✅ Service Worker activado"
+
+3. Application > Service Workers:
+   ✓ Debe aparecer "/service-worker.js"
+   ✓ Estado: "activated and running"
+
+4. Application > Notifications:
+   ✓ Permission: "granted"
+
+5. Network:
+   ✓ Busca: "new-content"
+   ✓ Debe responder 200 OK cada 30 segundos
+
+==============================================================================
+🎯 RESULTADO ESPERADO
+==============================================================================
+
+Después de actualizar todo:
+
+✅ Diálogo de permisos aparece 3 segundos después de login
+✅ Notificaciones llegan con sonido aunque la app esté cerrada
+✅ Badges rojos (🔴 5) aparecen en tabs cuando hay contenido nuevo
+✅ Banner superior "🔥 5 noticias nuevas - Ver ahora" aparece
+✅ Click en tabs limpia el badge
+✅ Click en banner navega al contenido
+✅ Backend envía push automático en noticias importantes
+✅ Backend envía push automático en alertas críticas
+
+==============================================================================
+🆘 SI ALGO NO FUNCIONA
+==============================================================================
+
+Revisa:
+1. ¿Creaste los iconos icon-192.png y icon-96.png?
+2. ¿El service-worker.js está en /public/?
+3. ¿Abriste en HTTPS o localhost? (HTTP no funciona)
+4. ¿Diste permiso de notificaciones cuando el navegador preguntó?
+5. ¿Estás en Chrome, Edge, Firefox o Safari 16.4+?
+
+Consulta:
+➜ INSTRUCCIONES_INSTALACION.md (sección Troubleshooting)
+➜ RESUMEN_CAMBIOS.md (documentación técnica completa)
+
+==============================================================================
+📞 CONTACTO Y SOPORTE
+==============================================================================
+
+Si encuentras algún problema:
+1. Revisa la consola del navegador (F12 > Console)
+2. Revisa los logs del backend (Supabase > Edge Functions > Logs)
+3. Lee el INSTRUCCIONES_INSTALACION.md completo
+4. Verifica el RESUMEN_CAMBIOS.md para entender el flujo
+
+==============================================================================
+
+✨ ¡LISTO! Tu app Informa ahora tiene notificaciones push profesionales ✨
+
+La comunidad de Gualán nunca se perderá una noticia o alerta importante 🔔🔥
+
+Desarrollado con ❤️ para Gualán, Zacapa, Guatemala
+Noviembre 2024
