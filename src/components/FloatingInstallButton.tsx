@@ -17,16 +17,17 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
   const [isAndroid, setIsAndroid] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [autoInstallAttempted, setAutoInstallAttempted] = useState(false)
 
   useEffect(() => {
     // Only run in browser
     if (typeof window === 'undefined') return
 
-    // Detect iOS and Android
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    const android = /Android/.test(navigator.userAgent)
-    setIsIOS(iOS)
-    setIsAndroid(android)
+  // Detect iOS and Android
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  const android = /Android/.test(navigator.userAgent)
+  setIsIOS(iOS)
+  setIsAndroid(android)
 
     // Check if app is already installed (running in standalone mode)
     const installed = window.matchMedia('(display-mode: standalone)').matches ||
@@ -54,14 +55,21 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
   }
 
   const handleClick = () => {
-    // PRIORIDAD 1: Si hay deferredPrompt, instalar inmediatamente
-    if (deferredPrompt) {
+    // iOS/Safari: mostrar instrucciones
+    if (isIOS) {
+      setShowInstructions(true)
+      return
+    }
+
+    // Android: intentar instalar automáticamente si hay prompt
+    if (isAndroid && deferredPrompt && !autoInstallAttempted) {
+      setAutoInstallAttempted(true)
       onInstall()
       setShowButton(false)
       return
     }
-    
-    // PRIORIDAD 2: Si no hay deferredPrompt, mostrar instrucciones
+
+    // Si no hay prompt, mostrar instrucciones (Android sin soporte, otros navegadores)
     setShowInstructions(true)
   }
 
