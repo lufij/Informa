@@ -154,11 +154,30 @@ export default function App() {
       setDeferredPrompt(null)
       setShowInstallBanner(false)
     } else {
-      // iOS or already installed - show instructions
-      toast.info('Instrucciones para instalar', {
-        description: 'En Safari: toca Compartir > Añadir a pantalla de inicio',
-        duration: 6000
-      })
+      // Detectar el sistema operativo
+      const userAgent = window.navigator.userAgent.toLowerCase()
+      const isIOS = /iphone|ipad|ipod/.test(userAgent)
+      const isAndroid = /android/.test(userAgent)
+      
+      if (isIOS) {
+        // iOS - mostrar instrucciones de Safari
+        toast.info('📱 Instrucciones para instalar en iOS', {
+          description: 'En Safari: toca el botón Compartir (📤) y luego "Añadir a pantalla de inicio"',
+          duration: 8000
+        })
+      } else if (isAndroid) {
+        // Android - mostrar instrucciones de Chrome
+        toast.info('🤖 Instrucciones para instalar en Android', {
+          description: 'En Chrome: toca el menú (⋮) arriba a la derecha y selecciona "Agregar a pantalla de inicio" o "Instalar app"',
+          duration: 8000
+        })
+      } else {
+        // Desktop
+        toast.info('💻 Instrucciones para instalar', {
+          description: 'En Chrome: haz clic en el ícono de instalación (⊕) en la barra de direcciones',
+          duration: 6000
+        })
+      }
     }
   }
   
