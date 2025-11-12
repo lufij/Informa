@@ -8,7 +8,7 @@ import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { projectId, publicAnonKey } from '../utils/supabase/info'
-import { MessageSquare, Plus, User, Send, Image, Video, X, ZoomIn, Trash2, Shield } from 'lucide-react'
+import { MessageSquare, Plus, User, Send, Image, Video, X, ZoomIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { ProfilePhotoGuard } from './ProfilePhotoGuard'
 import { PostActions } from './PostActions'
@@ -76,26 +76,7 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
 
   useEffect(() => {
     fetchForums()
-    
-    // Debug: Log user role when component loads
-    if (userProfile) {
-      console.log('👤 ForumsSection - User Profile:', {
-        phone: userProfile.phone,
-        role: userProfile.role,
-        isAdmin: userProfile.role === 'admin'
-      })
-      
-      // Show admin notification
-      if (userProfile.role === 'admin') {
-        setTimeout(() => {
-          toast.info('🛡️ Privilegios de Administrador Activos', {
-            description: 'Puedes eliminar cualquier tema del foro usando el botón 🗑️',
-            duration: 3000
-          })
-        }, 1000)
-      }
-    }
-  }, [userProfile])
+  }, [])
 
   // Scroll to highlighted item
   useEffect(() => {
@@ -347,85 +328,13 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
     setForumPosts(forumPosts.map(p => p.id === updatedPost.id ? updatedPost : p))
   }
 
-  const handleDeleteForum = async (forumId: string) => {
-    if (!token || !userProfile) {
-      toast.error('Debes iniciar sesión')
-      return
-    }
-
-    // Check if user is admin
-    if (userProfile.role !== 'admin') {
-      toast.error('Solo los administradores pueden eliminar temas')
-      console.log('User role:', userProfile.role, 'Required: admin')
-      return
-    }
-
-    const forum = forums.find(f => f.id === forumId)
-    const forumTitle = forum ? forum.topic : 'este tema'
-    
-    if (!confirm(`¿Estás seguro de que deseas eliminar "${forumTitle}"?\n\nEsta acción eliminará el tema y todas sus respuestas. Esta acción no se puede deshacer.`)) {
-      return
-    }
-
-    try {
-      console.log('Attempting to delete forum:', forumId)
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/forums/${forumId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      )
-
-      console.log('Delete response status:', response.status)
-      
-      if (response.ok) {
-        setForums(forums.filter(f => f.id !== forumId))
-        if (selectedForum?.id === forumId) {
-          setSelectedForum(null)
-        }
-        toast.success('🗑️ Tema eliminado correctamente')
-        console.log('Forum deleted successfully')
-      } else {
-        const error = await response.json()
-        console.error('Delete error response:', error)
-        toast.error(error.error || 'Error al eliminar el tema')
-      }
-    } catch (error) {
-      console.error('Error deleting forum:', error)
-      toast.error('Error al eliminar el tema')
-    }
-  }
-
   if (selectedForum) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => setSelectedForum(null)}>
             ← Volver
           </Button>
-          
-          {/* Admin Delete Button */}
-          {userProfile?.role === 'admin' && (
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-red-600 border-red-600 bg-red-50">
-                <Shield className="w-3 h-3 mr-1" />
-                Admin
-              </Badge>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleDeleteForum(selectedForum.id)}
-                className="gap-2 bg-red-600 hover:bg-red-700 shadow-lg"
-              >
-                <Trash2 className="w-4 h-4" />
-                Eliminar Tema
-              </Button>
-            </div>
-          )}
         </div>
 
         <Card>
@@ -495,14 +404,20 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
                   setShowEditDialog(true)
                 }}
                 onDelete={async () => {
+                  // Confirm before deleting
                   const confirmed = window.confirm(
-                    '¿Estás seguro que deseas eliminar este foro? Esta acción no se puede deshacer y eliminará todos los posts asociados.'
+                    '¿Estás seguro de eliminar este foro?\n\n' +
+                    'Se eliminarán:\n' +
+                    '• El foro completo\n' +
+                    '• Todas las respuestas\n\n' +
+                    'Esta acción no se puede deshacer.'
                   )
+                  
                   if (!confirmed) return
-
+                  
                   try {
                     const response = await fetch(
-                      `${projectId}/make-server-3467f1c6/forums/${selectedForum.id}`,
+                      `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/forums/${selectedForum.id}`,
                       {
                         method: 'DELETE',
                         headers: {
@@ -511,20 +426,17 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
                       }
                     )
 
-                    const data = await response.json()
-                    
-                    if (!response.ok) {
-                      throw new Error(data.error || 'Error al eliminar el foro')
+                    if (response.ok) {
+                      toast.success('🗑️ Foro eliminado exitosamente')
+                      setSelectedForum(null)
+                      setForums(forums.filter(f => f.id !== selectedForum.id))
+                    } else {
+                      const error = await response.json()
+                      toast.error(error.error || 'Error al eliminar el foro')
                     }
-
-                    toast.success('Foro eliminado exitosamente')
-                    setSelectedForum(null)
-                    
-                    // Actualizar lista de foros
-                    setForums(prevForums => prevForums.filter(f => f.id !== selectedForum.id))
-                  } catch (error: any) {
-                    console.error('Error al eliminar foro:', error)
-                    toast.error(error.message || 'Error al eliminar el foro')
+                  } catch (error) {
+                    console.error('Error deleting forum:', error)
+                    toast.error('Error al eliminar el foro')
                   }
                 }}
                 className="justify-end"
@@ -563,7 +475,7 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
                 {/* Post Actions */}
                 <div className="border-t-2 border-gray-100 pt-3 mt-3">
                   <PostActions
-                    postType="forum"
+                    postType="news"
                     postId={post.id}
                     token={token}
                     isAuthor={post.userId === userProfile?.id}
@@ -775,49 +687,23 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
             <Card 
               key={forum.id}
               id={`forum-${forum.id}`}
-              className={`hover:shadow-lg transition-all hover:-translate-y-1 border-l-4 border-l-blue-500 ${
+              className={`cursor-pointer hover:shadow-lg transition-all hover:-translate-y-1 border-l-4 border-l-blue-500 ${
                 highlightedItemId === forum.id ? 'ring-4 ring-yellow-400 ring-offset-4 animate-pulse' : ''
               }`}
+              onClick={() => setSelectedForum(forum)}
             >
-              <CardHeader 
-                className="cursor-pointer"
-                onClick={() => setSelectedForum(forum)}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Badge className={getCategoryColor(forum.category)}>
-                      {forum.category}
+              <CardHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className={getCategoryColor(forum.category)}>
+                    {forum.category}
+                  </Badge>
+                  <span className="text-sm text-gray-600">
+                    💬 {forum.postCount} {forum.postCount === 1 ? 'respuesta' : 'respuestas'}
+                  </span>
+                  {forum.mediaFiles && forum.mediaFiles.length > 0 && (
+                    <Badge variant="outline" className="text-blue-600 border-blue-600">
+                      📸 {forum.mediaFiles.length}
                     </Badge>
-                    <span className="text-sm text-gray-600">
-                      💬 {forum.postCount} {forum.postCount === 1 ? 'respuesta' : 'respuestas'}
-                    </span>
-                    {forum.mediaFiles && forum.mediaFiles.length > 0 && (
-                      <Badge variant="outline" className="text-blue-600 border-blue-600">
-                        📸 {forum.mediaFiles.length}
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {/* Admin Delete Button */}
-                  {userProfile?.role === 'admin' && (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-red-600 border-red-600 bg-red-50 text-xs">
-                        <Shield className="w-3 h-3 mr-1" />
-                        Admin
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation()
-                          handleDeleteForum(forum.id)
-                        }}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 shadow-sm"
-                        title="Eliminar tema (Solo administradores)"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
                   )}
                 </div>
                 <CardTitle>{forum.topic}</CardTitle>
@@ -839,6 +725,32 @@ export function ForumsSection({ token, userProfile, onRequestAuth, onOpenSetting
         onClose={() => setSelectedImage(null)}
         altText="Imagen de foro"
       />
+
+      {/* Edit Post Dialog */}
+      {showEditDialog && editingForum && (
+        <EditPostDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          postType="forum"
+          postId={editingForum.id}
+          currentContent={editingForum.topic}
+          currentDescription={editingForum.description}
+          token={token}
+          onUpdate={handleUpdateForum}
+        />
+      )}
+
+      {showEditDialog && editingPost && (
+        <EditPostDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          postType="forum"
+          postId={editingPost.id}
+          currentContent={editingPost.content}
+          token={token}
+          onUpdate={handleUpdatePost}
+        />
+      )}
     </div>
   )
 }

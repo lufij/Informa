@@ -16,8 +16,9 @@ import { UserAvatar } from './UserAvatar'
 import { PostActions } from './PostActions'
 import { EditPostDialog } from './EditPostDialog'
 import { ImageViewer } from './ImageViewer'
-import { optimizeMediaFile } from '../utils/imageOptimization'
-import { LazyImage } from './LazyImage'
+import { ImageGrid } from './ImageGrid'
+import { EnhancedUserBadge } from './EnhancedUserBadge'
+import { ProfileRequiredDialog } from './ProfileRequiredDialog'
 
 interface MediaFile {
   url: string
@@ -89,6 +90,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
   const [showUserProfile, setShowUserProfile] = useState(false)
   const [editingPost, setEditingPost] = useState<NewsItem | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [profileRequiredOpen, setProfileRequiredOpen] = useState(false)
 
   useEffect(() => {
     fetchNews()
@@ -135,7 +137,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
     }
   }
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     
     // Validate file types
@@ -148,22 +150,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       toast.error('Algunos archivos no son válidos. Solo se permiten imágenes y videos.')
     }
 
-    // Optimize files before adding them
-    const optimizedFiles: File[] = []
-    for (const file of validFiles) {
-      try {
-        const optimized = await optimizeMediaFile(file)
-        // Convert Blob back to File with original name
-        const optimizedFile = new File([optimized], file.name, { type: optimized.type })
-        optimizedFiles.push(optimizedFile)
-      } catch (error) {
-        console.error('Error optimizing file:', error)
-        // If optimization fails, use original file
-        optimizedFiles.push(file)
-      }
-    }
-
-    setSelectedFiles(prev => [...prev, ...optimizedFiles])
+    setSelectedFiles(prev => [...prev, ...validFiles])
   }
 
   const removeFile = (index: number) => {
@@ -429,7 +416,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       // Legacy categories (for old posts)
       general: '💬',
       educacion: '📚',
-      noticia: '👀',
+      chisme: '👀',
       amor: '💘',
       escandalo: '💥',
     }
@@ -444,7 +431,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       // Legacy categories (for old posts)
       general: 'bg-cyan-500 text-white',
       educacion: 'bg-green-500 text-white',
-      noticia: 'bg-pink-500 text-white',
+      chisme: 'bg-pink-500 text-white',
       amor: 'bg-rose-500 text-white',
       escandalo: 'bg-yellow-500 text-black',
     }
@@ -459,7 +446,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       // Legacy categories (for old posts)
       general: 'from-cyan-400 via-blue-500 to-purple-600',
       educacion: 'from-green-400 via-emerald-500 to-teal-600',
-      noticia: 'from-pink-400 via-fuchsia-500 to-purple-600',
+      chisme: 'from-pink-400 via-fuchsia-500 to-purple-600',
       amor: 'from-rose-400 via-pink-500 to-red-600',
       escandalo: 'from-yellow-400 via-orange-500 to-red-600',
     }
@@ -518,7 +505,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
                   Cuenta tu Noticia
                 </Button>
               </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-pink-50 to-purple-50">
+          <DialogContent className="max-w-md bg-gradient-to-br from-pink-50 to-purple-50">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-2xl">
                 🔥 ¡Cuenta tu Noticia!
@@ -527,7 +514,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
                 ¿Qué está pasando en tu comunidad? ¡Cuéntanos todo!
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateNews} className="space-y-4 pb-4">
+            <form onSubmit={handleCreateNews} className="space-y-4">
               {/* Tipo de noticia con botones visuales */}
               <div className="space-y-2">
                 <Label>¿De qué tipo es tu noticia?</Label>
@@ -602,70 +589,16 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
                   📸 Fotos y Videos
                   <span className="text-xs text-pink-600">(opcional pero recomendado)</span>
                 </Label>
-                <div className="border-2 border-dashed border-pink-300 rounded-lg p-4 bg-pink-50/50">
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    {/* Botón: Tomar Foto */}
-                    <label className="flex flex-col items-center gap-2 p-3 border-2 border-pink-200 rounded-lg cursor-pointer hover:border-pink-400 hover:bg-pink-100 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <Image className="w-5 h-5 text-pink-600" />
-                        <span className="text-sm font-medium">📷 Tomar Foto</span>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        capture="environment"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                    </label>
-                    
-                    {/* Botón: Grabar Video */}
-                    <label className="flex flex-col items-center gap-2 p-3 border-2 border-purple-200 rounded-lg cursor-pointer hover:border-purple-400 hover:bg-purple-100 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <Video className="w-5 h-5 text-purple-600" />
-                        <span className="text-sm font-medium">🎥 Grabar Video</span>
-                      </div>
-                      <input
-                        type="file"
-                        accept="video/*"
-                        capture="environment"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                    </label>
-                    
-                    {/* Botón: Galería Fotos */}
-                    <label className="flex flex-col items-center gap-2 p-3 border-2 border-blue-200 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-100 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <Image className="w-5 h-5 text-blue-600" />
-                        <span className="text-sm font-medium">🖼️ Galería</span>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                    </label>
-                    
-                    {/* Botón: Videos Guardados */}
-                    <label className="flex flex-col items-center gap-2 p-3 border-2 border-indigo-200 rounded-lg cursor-pointer hover:border-indigo-400 hover:bg-indigo-100 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <Video className="w-5 h-5 text-indigo-600" />
-                        <span className="text-sm font-medium">📹 Videos</span>
-                      </div>
-                      <input
-                        type="file"
-                        accept="video/*"
-                        multiple
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                  <p className="text-xs text-gray-600 text-center">
+                <div className="border-2 border-dashed border-pink-300 rounded-lg p-4 bg-pink-50/50 hover:bg-pink-50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="w-full text-sm cursor-pointer"
+                    capture="environment"
+                  />
+                  <p className="text-xs text-gray-600 mt-2">
                     📱 ¡Una imagen vale más que mil palabras!
                   </p>
                 </div>
@@ -809,45 +742,43 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
               <CardContent className="space-y-4 bg-white">
                 <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-lg">{item.content}</p>
                 
+                {/* Media Gallery with new ImageGrid component */}
                 {item.mediaFiles && item.mediaFiles.length > 0 && (
-                  <div className="grid grid-cols-1 gap-4 mt-4">
-                    {item.mediaFiles.map((media, index) => (
-                      <div key={index} className="rounded-xl overflow-hidden bg-gray-100 relative group">
-                        {media.type.startsWith('image/') ? (
-                          <>
-                            <LazyImage
-                              src={media.url}
-                              alt={`Imagen ${index + 1}`}
-                              className="w-full h-auto object-contain cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                              onClick={() => setSelectedImage(media.url)}
-                            />
-                            <div 
-                              className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center cursor-pointer"
-                              onClick={() => setSelectedImage(media.url)}
-                            >
-                              <div className="bg-white/90 rounded-full p-3 opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300">
-                                <ZoomIn className="w-6 h-6 text-gray-800" />
-                              </div>
+                  <div className="mt-4">
+                    {/* Separate images and videos */}
+                    {(() => {
+                      const images = item.mediaFiles.filter(m => m.type.startsWith('image/'))
+                      const videos = item.mediaFiles.filter(m => m.type.startsWith('video/'))
+                      
+                      return (
+                        <>
+                          {/* Render images using ImageGrid */}
+                          {images.length > 0 && <ImageGrid images={images} />}
+                          
+                          {/* Render videos separately */}
+                          {videos.length > 0 && (
+                            <div className="space-y-2 mt-2">
+                              {videos.map((media, index) => (
+                                <div key={`video-${index}`} className="rounded-xl overflow-hidden bg-gray-100 relative">
+                                  <video
+                                    src={media.url}
+                                    controls
+                                    className="w-full h-auto"
+                                    style={{ maxHeight: '500px' }}
+                                  >
+                                    Tu navegador no soporta la reproducción de video.
+                                  </video>
+                                  <div className="absolute top-3 left-3 bg-black/70 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-sm">
+                                    <Play className="w-3.5 h-3.5" />
+                                    <span>Video</span>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          </>
-                        ) : media.type.startsWith('video/') ? (
-                          <div className="relative">
-                            <video
-                              src={media.url}
-                              controls
-                              className="w-full h-auto"
-                              style={{ maxHeight: '500px' }}
-                            >
-                              Tu navegador no soporta la reproducción de video.
-                            </video>
-                            <div className="absolute top-3 left-3 bg-black/70 text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-sm">
-                              <Play className="w-3.5 h-3.5" />
-                              <span>Video</span>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    ))}
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                 )}
 
@@ -1060,7 +991,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
             <DialogTitle>Visor de imagen</DialogTitle>
           </DialogHeader>
           <div id="image-viewer-description" className="sr-only">
-            Imagen de la noticia en tamaño completo
+            Imagen del chisme en tamaño completo
           </div>
           <div className="relative w-full h-full flex items-center justify-center p-4">
             <Button
@@ -1086,7 +1017,7 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
       <button
         onClick={() => token ? setIsDialogOpen(true) : onRequestAuth()}
         className="fixed bottom-6 right-6 w-16 h-16 rounded-full shadow-2xl bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-600 hover:from-yellow-500 hover:via-orange-600 hover:to-pink-700 text-white z-50 flex items-center justify-center transition-all duration-300 hover:scale-110 animate-pulse hover:animate-none border-4 border-white"
-        aria-label="Crear nueva noticia"
+        aria-label="Crear nuevo chisme"
       >
         <Plus className="w-8 h-8 drop-shadow-lg" />
       </button>
@@ -1100,7 +1031,6 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
           postId={editingPost.id}
           initialTitle={editingPost.title}
           initialContent={editingPost.content}
-          initialMediaFiles={editingPost.mediaFiles}
           token={token}
           onSuccess={(updatedPost) => {
             setNews(news.map(n => n.id === updatedPost.id ? { ...n, ...updatedPost } : n))
@@ -1125,6 +1055,17 @@ export function NewsSection({ token, userProfile, onRequestAuth, onOpenSettings,
         imageUrl={selectedImage}
         onClose={() => setSelectedImage(null)}
         altText="Imagen de noticia"
+      />
+
+      {/* Profile Required Dialog */}
+      <ProfileRequiredDialog
+        open={profileRequiredOpen}
+        onOpenChange={setProfileRequiredOpen}
+        onCompleteProfile={() => {
+          setProfileRequiredOpen(false)
+          onOpenSettings()
+        }}
+        missingItems={['📸 Foto de perfil']}
       />
     </div>
   )

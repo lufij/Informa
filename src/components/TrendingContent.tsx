@@ -101,8 +101,8 @@ export function TrendingContent({ open, onOpenChange, onNavigate }: TrendingCont
       : 'from-red-500 to-pink-500'
   }
 
-  const getTypeLabel = (type: string) => {
-    return type === 'news' ? 'Noticia' : 'Alerta'
+  const getLabel = (type: string) => {
+    return type === 'news' ? 'Chisme' : 'Alerta'
   }
 
   const getTimeframeLabel = (tf: string) => {
@@ -206,7 +206,7 @@ export function TrendingContent({ open, onOpenChange, onNavigate }: TrendingCont
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge className={`bg-gradient-to-r ${getGradient(item.contentType)} text-white text-xs`}>
-                                {getTypeLabel(item.contentType)}
+                                {getLabel(item.contentType)}
                               </Badge>
                               {item.category && (
                                 <Badge variant="outline" className="text-xs">

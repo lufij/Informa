@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { UserAvatar } from './components/UserAvatar'
 import { ContentSkeleton } from './components/ContentSkeleton'
 import { FixPhoneButton } from './components/FixPhoneButton'
-import ErrorBoundary from './components/ErrorBoundary'
+import { ProgressiveOnboarding } from './components/ProgressiveOnboarding'
+import { useAppInstalled } from './hooks/useAppInstalled'
+import { NewContentNotifier } from './components/NewContentNotifier'
 
 // Lazy load componentes pesados
 const LoginPage = lazy(() => import('./components/LoginPage').then(m => ({ default: m.LoginPage })))
@@ -25,7 +27,10 @@ const PWANetworkStatus = lazy(() => import('./components/PWANetworkStatus').then
 const PublicContentView = lazy(() => import('./components/PublicContentView').then(m => ({ default: m.PublicContentView })))
 const InstallAppBanner = lazy(() => import('./components/InstallAppBanner').then(m => ({ default: m.InstallAppBanner })))
 const FloatingInstallButton = lazy(() => import('./components/FloatingInstallButton').then(m => ({ default: m.FloatingInstallButton })))
-// const EmergencyAlertBanner = lazy(() => import('./components/EmergencyAlertBanner').then(m => ({ default: m.EmergencyAlertBanner })))
+const NotificationPreferences = lazy(() => import('./components/NotificationPreferences').then(m => ({ default: m.NotificationPreferences })))
+const PushNotificationManager = lazy(() => import('./components/PushNotificationManager').then(m => ({ default: m.PushNotificationManager })))
+import { NewContentBanner } from './components/NewContentBanner'
+import { NewContentBadge } from './components/NewContentBadge'
 import { Button } from './components/ui/button'
 import { Badge } from './components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs'
@@ -33,10 +38,10 @@ import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner'
 import { getSupabaseClient } from './utils/supabase/client'
 import { projectId, publicAnonKey } from './utils/supabase/info'
-import { LogOut, Sparkles, TrendingUp, LogIn, UserPlus, Bell, Search, Mail, Bookmark, Rss, Shield, User, Menu } from 'lucide-react'
+import { Flame, Megaphone, ShoppingBag, MessageSquare, LogOut, Sparkles, TrendingUp, Eye, LogIn, UserPlus, Bell, Search, Mail, Bookmark, Rss, Shield, User, Menu } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './components/ui/dropdown-menu'
-// import logoCircular from 'figma:asset/159f250301c9fc78337e0c8aa784431ded1c39c8.png'
+import logoCircular from 'figma:asset/159f250301c9fc78337e0c8aa784431ded1c39c8.png'
 
 export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
@@ -64,15 +69,24 @@ export default function App() {
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
 
+  // New content tracking
+  const [newContent, setNewContent] = useState<any[]>([])
+  const [showNewContentBanner, setShowNewContentBanner] = useState(false)
+  const [lastContentCheck, setLastContentCheck] = useState<string>(new Date().toISOString())
+  const [newContentCounts, setNewContentCounts] = useState({
+    news: 0,
+    alerts: 0,
+    classifieds: 0,
+    forums: 0,
+    events: 0
+  })
+
+  // PWA installation check - MUST be called at top level
+  const isAppInstalled = useAppInstalled()
+
   useEffect(() => {
     // Update page title
     document.title = 'Informa - Lo que está pasando ahora'
-    
-    // Prevenir múltiples ejecuciones usando variable global mejorada
-    if ((window as any).__INFORMA_INITIALIZED) {
-      return
-    }
-    ;(window as any).__INFORMA_INITIALIZED = true
     
     // Check for deep links FIRST (before checking session)
     const params = new URLSearchParams(window.location.search)
@@ -88,10 +102,10 @@ export default function App() {
     // Check existing session (critical)
     checkExistingSession()
     
-    // Diferir llamadas no críticas más tiempo para evitar sobrecarga
-    const migrationTimeout = setTimeout(() => {
-      migrateFirefighterUser().catch(console.error)
-    }, 5000) // Aumentado a 5 segundos
+    // Diferir llamadas no críticas
+    setTimeout(() => {
+      migrateFirefighterUser()
+    }, 2000) // Ejecutar después de 2 segundos
     
     // Listen for PWA install prompt
     const handleBeforeInstall = (e: Event) => {
@@ -102,153 +116,49 @@ export default function App() {
     
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
-      clearTimeout(migrationTimeout)
     }
-  }, []) // Sin dependencias para evitar re-ejecuciones
-  
-  // Auto-suscribir a push notifications cuando el usuario está autenticado
-  useEffect(() => {
-    if (isAuthenticated && token) {
-      // Esperar 3 segundos después del login para pedir permisos
-      const timer = setTimeout(() => {
-        subscribeToPushNotifications()
-      }, 3000)
-      
-      return () => clearTimeout(timer)
-    }
-  }, [isAuthenticated, token])
-  
-  // Request notification permissions
-  const requestNotificationPermission = async () => {
-    // Only request if notifications are supported
-    if (!('Notification' in window)) {
-      console.log('Este navegador no soporta notificaciones')
-      return
-    }
-    
-    // Check current permission
-    if (Notification.permission === 'granted') {
-      console.log('Permisos de notificación ya concedidos')
-      return
-    }
-    
-    // Don't ask immediately on first load - wait for user to be authenticated
-    // This will be called again when user logs in
-    if (Notification.permission === 'default' && isAuthenticated) {
-      try {
-        const permission = await Notification.requestPermission()
-        if (permission === 'granted') {
-          console.log('Permisos de notificación concedidos')
-          // Subscribe to push notifications
-          await subscribeToPushNotifications()
-        }
-      } catch (error) {
-        console.error('Error solicitando permisos de notificación:', error)
-      }
-    }
-  }
-  
-  // Subscribe to push notifications
-  const subscribeToPushNotifications = async () => {
-    try {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.log('Push notifications no soportadas')
-        return
-      }
-
-      const { requestNotificationPermission, subscribeToPushNotifications: subscribe } = await import('./utils/notificationService')
-      
-      const hasPermission = await requestNotificationPermission()
-      if (!hasPermission) {
-        console.log('Permisos de notificación denegados')
-        return
-      }
-
-      await subscribe(token || '')
-      console.log('✅ Suscrito a push notifications')
-    } catch (error) {
-      console.error('Error suscribiendo a push notifications:', error)
-    }
-  }
+  }, [])
   
   // Handle deep link navigation when user is already authenticated
   useEffect(() => {
-    if (!isAuthenticated || !deepLinkView || !deepLinkId) {
-      return
+    if (isAuthenticated && deepLinkView && deepLinkId) {
+      const sectionMap = {
+        news: 'news',
+        alert: 'alerts',
+        classified: 'classifieds',
+        forum: 'forums'
+      }
+      setActiveTab(sectionMap[deepLinkView] as any)
+      setHighlightedItemId(deepLinkId)
+      setDeepLinkView(null)
+      setDeepLinkId(null)
+      setShowInstallBanner(false)
+      
+      toast.success('Te llevamos al contenido 👋', {
+        duration: 2000
+      })
     }
-
-    const sectionMap = {
-      news: 'news',
-      alert: 'alerts',
-      classified: 'classifieds',
-      forum: 'forums'
-    }
-    
-    setActiveTab(sectionMap[deepLinkView] as any)
-    setHighlightedItemId(deepLinkId)
-    setDeepLinkView(null)
-    setDeepLinkId(null)
-    setShowInstallBanner(false)
-    
-    toast.success('Te llevamos al contenido 👋', {
-      duration: 2000
-    })
   }, [isAuthenticated, deepLinkView, deepLinkId])
   
-  // const handleViewEmergencyAlert = (alertId: string) => {
-  //   setActiveTab('alertas')
-  //   setHighlightedItemId(alertId)
-  //   setTimeout(() => setHighlightedItemId(null), 5000)
-  // }
-  
   const handleInstallPWA = async () => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    
     if (deferredPrompt) {
-      try {
-        console.log('Intentando instalar PWA...')
-        // Show the install prompt
-        const promptResult = await deferredPrompt.prompt()
-        console.log('Prompt mostrado:', promptResult)
-        
-        // Wait for the user to respond to the prompt
-        const { outcome } = await deferredPrompt.userChoice
-        console.log('Resultado de instalación:', outcome)
-        
-        if (outcome === 'accepted') {
-          toast.success('¡App instalada! 🎉', {
-            description: 'Ahora puedes acceder desde tu pantalla de inicio'
-          })
-        } else {
-          toast.info('Instalación cancelada', {
-            description: 'El botón seguirá disponible si cambias de opinión'
-          })
-        }
-        
-        // Clear the prompt as it can only be used once
-        setDeferredPrompt(null)
-        setShowInstallBanner(false)
-      } catch (error) {
-        console.error('Error al instalar PWA:', error)
-        toast.error('Error al instalar', {
-          description: 'Intenta desde el menú de Chrome: Más opciones > Instalar app',
-          duration: 5000
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      
+      if (outcome === 'accepted') {
+        toast.success('¡App instalada! 🎉', {
+          description: 'Ahora puedes acceder desde tu pantalla de inicio'
         })
       }
+      
+      setDeferredPrompt(null)
+      setShowInstallBanner(false)
     } else {
-      console.log('No hay deferredPrompt disponible')
-      // No prompt available
-      if (isIOS) {
-        toast.info('Instrucciones para iOS', {
-          description: 'En Safari: toca Compartir > Añadir a pantalla de inicio',
-          duration: 6000
-        })
-      } else {
-        toast.info('Instalar desde el navegador', {
-          description: 'En Chrome: Menú (⋮) > Instalar aplicación',
-          duration: 6000
-        })
-      }
+      // iOS or already installed - show instructions
+      toast.info('Instrucciones para instalar', {
+        description: 'En Safari: toca Compartir > Añadir a pantalla de inicio',
+        duration: 6000
+      })
     }
   }
   
@@ -285,35 +195,42 @@ export default function App() {
     }
   }
 
-  const fetchUnreadCount = useCallback(async () => {
+  // Poll for unread notifications AND new content (diferido)
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      // Diferir primera carga de notificaciones 1 segundo
+      const initialTimeout = setTimeout(() => {
+        fetchUnreadCount()
+        checkNewContent()
+      }, 1000)
+      
+      // Polling cada 30 segundos para notificaciones y contenido nuevo
+      const interval = setInterval(() => {
+        if (navigator.onLine) {
+          fetchUnreadCount()
+          checkNewContent()
+        }
+      }, 30000)
+      
+      return () => {
+        clearTimeout(initialTimeout)
+        clearInterval(interval)
+      }
+    }
+  }, [isAuthenticated, token])
+
+  const fetchUnreadCount = async () => {
     if (!token) return
     
-    // Prevenir múltiples llamadas simultáneas
-    if ((fetchUnreadCount as any).__fetching) {
-      return
-    }
-    (fetchUnreadCount as any).__fetching = true
-    
     try {
-      // Timeout mejorado para evitar esperas infinitas en móviles
-      const controller = new AbortController()
-      setTimeout(() => controller.abort(), 5000)
-      
-      const fetchPromise = fetch(
+      const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/notifications`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
-          },
-          signal: controller.signal
+          }
         }
       )
-      
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Notification fetch timeout')), 5000)
-      )
-      
-      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response
       
       if (response.ok) {
         const notifications = await response.json()
@@ -321,55 +238,58 @@ export default function App() {
         setUnreadNotifications(unread)
       }
     } catch (error) {
-      // Silent fail - no mostrar errores para evitar bucles
-      console.log('Notification fetch skipped (timeout or error)')
-    } finally {
-      // Limpiar flag de fetching
-      (fetchUnreadCount as any).__fetching = false
+      // Silent fail - don't log network errors for background polling
+      // Only log if it's not a network connectivity issue
+      if (error instanceof Error && !error.message.includes('fetch')) {
+        console.error('Error fetching notification count:', error)
+      }
     }
-  }, [token]) // Memoizar con dependencia de token
+  }
 
-  // Poll for unread notifications (diferido y optimizado)
-  useEffect(() => {
-    if (!isAuthenticated || !token) {
-      return
-    }
+  const checkNewContent = async () => {
+    if (!token) return
     
-    // Prevenir múltiples efectos ejecutándose
-    let mounted = true
-    
-    // Diferir primera carga de notificaciones 1 segundo
-    const initialTimeout = setTimeout(() => {
-      if (mounted && navigator.onLine) {
-        fetchUnreadCount()
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/notifications/new-content?since=${lastContentCheck}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
+      
+      if (response.ok) {
+        const content = await response.json()
+        
+        if (content.length > 0) {
+          setNewContent(content)
+          setShowNewContentBanner(true)
+          
+          // Update counts for badges
+          const counts = {
+            news: content.find((c: any) => c.type === 'news')?.count || 0,
+            alerts: content.find((c: any) => c.type === 'alert')?.count || 0,
+            classifieds: content.find((c: any) => c.type === 'classified')?.count || 0,
+            forums: content.find((c: any) => c.type === 'forum')?.count || 0,
+            events: content.find((c: any) => c.type === 'event')?.count || 0
+          }
+          setNewContentCounts(counts)
+          
+          // Update last check timestamp
+          setLastContentCheck(new Date().toISOString())
+        }
       }
-    }, 1000)
-    
-    // Polling cada 30 segundos con verificación de mounted
-    const interval = setInterval(() => {
-      if (mounted && navigator.onLine && isAuthenticated && token) {
-        fetchUnreadCount()
-      }
-    }, 30000)
-    
-    return () => {
-      mounted = false
-      clearTimeout(initialTimeout)
-      clearInterval(interval)
+    } catch (error) {
+      // Silent fail
     }
-  }, [isAuthenticated, token, fetchUnreadCount]) // Añadir fetchUnreadCount memoizado
+  }
 
   const checkExistingSession = async () => {
     try {
       const supabase = getSupabaseClient()
 
-      // Timeout mejorado para evitar esperas infinitas
-      const sessionPromise = supabase.auth.getSession()
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session check timeout')), 10000)
-      )
-      
-      const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any
+      const { data: { session }, error } = await supabase.auth.getSession()
 
       if (session && session.access_token) {
         // Establecer token inmediatamente para mostrar UI
@@ -378,7 +298,7 @@ export default function App() {
         setIsCheckingSession(false) // Liberar UI inmediatamente
         
         // Fetch user profile en background (no bloquea la UI)
-        const profilePromise = fetch(
+        fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/auth/profile`,
           {
             headers: {
@@ -386,14 +306,7 @@ export default function App() {
             }
           }
         )
-        
-        // Timeout para profile también
-        const profileTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Profile fetch timeout')), 8000)
-        )
-        
-        Promise.race([profilePromise, profileTimeoutPromise])
-        .then((response: any) => {
+        .then(response => {
           if (response.ok) {
             return response.json()
           }
@@ -426,23 +339,18 @@ export default function App() {
           }
         })
         .catch(error => {
-          // Si falla el perfil, NO cerrar sesión para evitar bucles
-          console.error('Error fetching profile (non-critical):', error)
-          // Fallback: crear un perfil mínimo para evitar errores en UI
-          if (!userProfile) {
-            setUserProfile({
-              id: 'temp',
-              name: 'Usuario',
-              phone: '',
-              role: 'user'
-            })
-          }
+          // Si falla el perfil, cerrar sesión
+          console.error('Error fetching profile:', error)
+          setIsAuthenticated(false)
+          setToken(null)
         })
       } else {
         setIsCheckingSession(false)
       }
     } catch (error) {
-      console.error('Error al verificar sesión:', error)
+      if (error instanceof Error && !error.message.includes('fetch')) {
+        console.error('Error al verificar sesión:', error)
+      }
       setIsCheckingSession(false)
     }
   }
@@ -456,11 +364,6 @@ export default function App() {
     setToken(accessToken)
     setUserProfile(profile)
     setIsAuthenticated(true)
-    
-    // Request notification permissions after successful login
-    setTimeout(() => {
-      requestNotificationPermission()
-    }, 2000)
     
     // Show welcome message based on context
     if (!deepLinkView) {
@@ -535,7 +438,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600">
       <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center shadow-2xl mb-4 animate-bounce">
         <img 
-          src="/icons/icon-192x192.png" 
+          src={logoCircular} 
           alt="Informa" 
           className="w-full h-full object-contain p-2"
         />
@@ -563,8 +466,7 @@ export default function App() {
   }
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50">
       {/* Header - Mobile Optimized */}
       <header className="bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 sticky top-0 z-10 shadow-lg">
         <div className="w-full px-3 sm:px-4 py-3">
@@ -573,7 +475,7 @@ export default function App() {
             <div className="flex items-center gap-2 min-w-0 flex-shrink">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-lg p-1 flex-shrink-0">
                 <img 
-                  src="/icons/icon-192x192.png" 
+                  src={logoCircular} 
                   alt="Informa Logo" 
                   className="w-full h-full object-contain"
                 />
@@ -805,18 +707,38 @@ export default function App() {
             <TabsTrigger value="news" className="flex flex-col sm:flex-row items-center justify-center gap-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-orange-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-1 min-w-0">
               <span className="text-base flex-shrink-0">🔥</span>
               <span className="hidden sm:inline truncate">Noticias</span>
+              {newContentCounts.news > 0 && (
+                <div className="absolute -top-1 -right-1">
+                  <NewContentBadge count={newContentCounts.news} variant="small" />
+                </div>
+              )}
             </TabsTrigger>
             <TabsTrigger value="alerts" className="flex flex-col sm:flex-row items-center justify-center gap-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-1 min-w-0">
               <span className="text-base flex-shrink-0">📢</span>
               <span className="hidden sm:inline truncate">Alertas</span>
+              {newContentCounts.alerts > 0 && (
+                <div className="absolute -top-1 -right-1">
+                  <NewContentBadge count={newContentCounts.alerts} variant="small" />
+                </div>
+              )}
             </TabsTrigger>
             <TabsTrigger value="classifieds" className="flex flex-col sm:flex-row items-center justify-center gap-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-1 min-w-0">
               <span className="text-base flex-shrink-0">💼</span>
               <span className="hidden sm:inline truncate">Clasif.</span>
+              {newContentCounts.classifieds > 0 && (
+                <div className="absolute -top-1 -right-1">
+                  <NewContentBadge count={newContentCounts.classifieds} variant="small" />
+                </div>
+              )}
             </TabsTrigger>
             <TabsTrigger value="forums" className="flex flex-col sm:flex-row items-center justify-center gap-1 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white text-xs sm:text-sm py-2 px-1 min-w-0">
               <span className="text-base flex-shrink-0">💬</span>
               <span className="hidden sm:inline truncate">Foros</span>
+              {newContentCounts.forums > 0 && (
+                <div className="absolute -top-1 -right-1">
+                  <NewContentBadge count={newContentCounts.forums} variant="small" />
+                </div>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -840,7 +762,7 @@ export default function App() {
                 userProfile={userProfile} 
                 onRequestAuth={() => setShowAuthDialog(true)}
                 onOpenSettings={() => setShowSettings(true)}
-                onNavigateToPost={(section, _postId) => setActiveTab(section)}
+                onNavigateToPost={(section, postId) => setActiveTab(section)}
                 highlightedItemId={highlightedItemId}
                 onItemHighlighted={() => setHighlightedItemId(null)}
               />
@@ -854,7 +776,7 @@ export default function App() {
                 userProfile={userProfile} 
                 onRequestAuth={() => setShowAuthDialog(true)}
                 onOpenSettings={() => setShowSettings(true)}
-                onNavigateToPost={(section, _postId) => setActiveTab(section)}
+                onNavigateToPost={(section, postId) => setActiveTab(section)}
                 highlightedItemId={highlightedItemId}
                 onItemHighlighted={() => setHighlightedItemId(null)}
                 refreshTrigger={alertsRefreshTrigger}
@@ -869,7 +791,7 @@ export default function App() {
                 userProfile={userProfile} 
                 onRequestAuth={() => setShowAuthDialog(true)}
                 onOpenSettings={() => setShowSettings(true)}
-                onNavigateToPost={(section, _postId) => setActiveTab(section)}
+                onNavigateToPost={(section, postId) => setActiveTab(section)}
                 highlightedItemId={highlightedItemId}
                 onItemHighlighted={() => setHighlightedItemId(null)}
               />
@@ -883,7 +805,7 @@ export default function App() {
                 userProfile={userProfile} 
                 onRequestAuth={() => setShowAuthDialog(true)}
                 onOpenSettings={() => setShowSettings(true)}
-                onNavigateToPost={(section, _postId) => setActiveTab(section)}
+                onNavigateToPost={(section, postId) => setActiveTab(section)}
                 highlightedItemId={highlightedItemId}
                 onItemHighlighted={() => setHighlightedItemId(null)}
               />
@@ -962,7 +884,7 @@ export default function App() {
             }}
             token={token}
             onNavigate={(section, itemId) => {
-              setHighlightedItemId(itemId || null)
+              setHighlightedItemId(itemId)
               setActiveTab(section)
               setShowNotifications(false)
             }}
@@ -1084,13 +1006,6 @@ export default function App() {
 
       <Toaster />
       
-      {/* Emergency Alert Banner - TEMPORARILY DISABLED */}
-      {/*
-      <Suspense fallback={null}>
-        <EmergencyAlertBanner onViewAlert={handleViewEmergencyAlert} />
-      </Suspense>
-      */}
-      
       {/* PWA Components */}
       <Suspense fallback={null}>
         <PWAInstallPrompt />
@@ -1110,7 +1025,58 @@ export default function App() {
           />
         )}
       </Suspense>
-      </div>
-    </ErrorBoundary>
+      
+      {/* Progressive Onboarding */}
+      {isAuthenticated && !isAppInstalled && (
+        <ProgressiveOnboarding />
+      )}
+      
+      {/* New Content Notifier */}
+      {isAuthenticated && (
+        <NewContentNotifier
+          token={token}
+          userProfile={userProfile}
+          onNavigate={(section) => setActiveTab(section)}
+        />
+      )}
+      
+      {/* New Content Banner */}
+      {isAuthenticated && showNewContentBanner && newContent.length > 0 && (
+        <NewContentBanner
+          newContent={newContent}
+          onNavigate={(type, id) => {
+            const sectionMap: Record<string, string> = {
+              noticias: 'news',
+              alertas: 'alerts',
+              clasificados: 'classifieds',
+              foros: 'forums',
+              calendario: 'feed'
+            }
+            setActiveTab(sectionMap[type] || 'feed')
+            if (id) setHighlightedItemId(id)
+            setShowNewContentBanner(false)
+            // Clear counts for the visited section
+            const contentType = newContent[0]?.type
+            if (contentType) {
+              setNewContentCounts(prev => ({ ...prev, [contentType]: 0 }))
+            }
+          }}
+          onDismiss={() => {
+            setShowNewContentBanner(false)
+            setNewContent([])
+          }}
+        />
+      )}
+      
+      {/* Push Notification Manager */}
+      {isAuthenticated && token && userProfile && (
+        <Suspense fallback={null}>
+          <PushNotificationManager
+            token={token}
+            userProfile={userProfile}
+          />
+        </Suspense>
+      )}
+    </div>
   )
 }

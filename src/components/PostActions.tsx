@@ -1,28 +1,37 @@
 import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
-import { Bookmark, Share2, Flag, Edit, Copy, Check, MessageCircle, Phone, Trash2 } from 'lucide-react'
+import { Bookmark, Share2, Flag, Edit, Copy, Check, MessageCircle, Phone, Trash2, Facebook } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
 import { Textarea } from './ui/textarea'
 import { Label } from './ui/label'
 import { projectId } from '../utils/supabase/info'
 import { toast } from 'sonner'
 import { ReportDialog } from './ReportDialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from './ui/dropdown-menu'
 
 interface PostActionsProps {
   postType: 'news' | 'alert' | 'classified' | 'forum'
   postId: string
   token: string | null
   isAuthor?: boolean
-  isAdmin?: boolean       // Nueva prop para identificar admins
+  isAdmin?: boolean       // Permite que admins también eliminen
   onEdit?: () => void
-  onDelete?: () => void   // Nueva prop para manejar eliminación
+  onDelete?: () => void   // Función para eliminar el contenido
   className?: string
   contactPhone?: string  // Número de contacto para clasificados
   recipientId?: string   // ID del usuario destinatario
   recipientName?: string // Nombre del destinatario
+  title?: string         // Título del post para compartir
+  imageUrl?: string      // Imagen del post para compartir
 }
 
-export function PostActions({ postType, postId, token, isAuthor, isAdmin, onEdit, onDelete, className = '', contactPhone, recipientId, recipientName }: PostActionsProps) {
+export function PostActions({ postType, postId, token, isAuthor, isAdmin, onEdit, onDelete, className = '', contactPhone, recipientId, recipientName, title, imageUrl }: PostActionsProps) {
   const [isSaved, setIsSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showReportDialog, setShowReportDialog] = useState(false)
@@ -353,13 +362,13 @@ export function PostActions({ postType, postId, token, isAuthor, isAdmin, onEdit
           </Button>
         )}
 
-        {/* Delete Button (only for admins and forum authors) */}
-        {(isAdmin || isAuthor) && onDelete && postType === 'forum' && (
+        {/* Delete Button (admin or author can delete) */}
+        {(isAuthor || isAdmin) && onDelete && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            className="text-xs text-gray-600 hover:text-red-700 h-8 px-2"
+            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 h-8 px-2"
           >
             <Trash2 className="w-3.5 h-3.5 mr-0.5" />
             <span className="text-[11px]">Eliminar</span>

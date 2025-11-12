@@ -27,6 +27,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
   const [isUploading, setIsUploading] = useState(false)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [useFileUpload, setUseFileUpload] = useState(false)
   const [activeTab, setActiveTab] = useState('view')
   
   // Profile info states
@@ -48,6 +49,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const imageContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
     // Reset states when dialog opens
     if (open) {
       setCameraError(null)
+      setUseFileUpload(false)
       setActiveTab('view')
       // Load existing profile info
       setBio(userProfile?.bio || '')
@@ -94,19 +97,15 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
   }
 
   const startCamera = async () => {
-    console.log('🎥 Iniciando cámara...')
     setCameraError(null)
-    setCapturedPhoto(null) // Reset captured photo
+    setUseFileUpload(false)
     
     try {
       // Check if mediaDevices is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.error('❌ getUserMedia no soportado')
         throw new Error('UNSUPPORTED')
       }
 
-      console.log('📱 Solicitando permisos de cámara...')
-      
       // Request camera permissions with better error handling
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -117,28 +116,13 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
         audio: false
       })
       
-      console.log('✅ Permisos concedidos, configurando stream...')
-      
       setStream(mediaStream)
-      
-      // Wait for next tick to ensure state is updated
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
-        try {
-          await videoRef.current.play()
-          console.log('▶️ Video reproduciendo')
-        } catch (playError) {
-          console.error('Error al reproducir video:', playError)
-        }
-      } else {
-        console.warn('⚠️ videoRef.current no disponible')
+        videoRef.current.play()
       }
-      
       setIsCapturing(true)
       setCameraError(null)
-      console.log('✅ Cámara iniciada exitosamente')
       
     } catch (error: any) {
       console.error('Error al acceder a la cámara:', error)
@@ -171,6 +155,9 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
         description: toastDescription,
         duration: 6000
       })
+      
+      // Automatically switch to file upload option
+      setUseFileUpload(true)
     }
   }
 
@@ -539,6 +526,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
       setCapturedPhoto(null)
     }
     setCameraError(null)
+    setUseFileUpload(false)
     setActiveTab('view')
     onOpenChange(false)
   }
@@ -987,7 +975,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
                     <ZoomOut className="w-5 h-5 text-green-700 flex-shrink-0" />
                     <Slider
                       value={[photoScale]}
-                      onValueChange={(values: number[]) => setPhotoScale(values[0])}
+                      onValueChange={(values) => setPhotoScale(values[0])}
                       min={1}
                       max={3}
                       step={0.1}
@@ -1067,6 +1055,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
                         <Button
                           onClick={() => {
                             setCameraError(null)
+                            setUseFileUpload(false)
                             startCamera()
                           }}
                           className="flex-1 bg-green-600 hover:bg-green-700 text-white"
@@ -1099,6 +1088,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
                       <Button
                         onClick={() => {
                           setCameraError(null)
+                          setUseFileUpload(false)
                           startCamera()
                         }}
                         className="bg-green-600 hover:bg-green-700 text-white"
@@ -1130,6 +1120,7 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
                       <Button
                         onClick={() => {
                           setCameraError(null)
+                          setUseFileUpload(false)
                           startCamera()
                         }}
                         className="bg-green-600 hover:bg-green-700 text-white"
@@ -1147,50 +1138,51 @@ export function UserSettings({ open, onOpenChange, token, userProfile, onProfile
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-2">
-            {!isCapturing && !capturedPhoto && !cameraError && (
+            {!isCapturing && !capturedPhoto && !useFileUpload && !cameraError && (
               <>
-                {/* Botón 1: Tomar Foto (abre cámara nativa del celular) */}
-                <label className="w-full cursor-pointer">
-                  <div className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:from-pink-600 hover:to-purple-700 shadow-md rounded-md px-4 py-3 flex items-center justify-center gap-2 transition-all">
-                    <Camera className="w-5 h-5" />
-                    <span className="font-medium">Tomar Foto con Cámara</span>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="user"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </label>
-
-                {/* Botón 2: Subir desde Galería */}
-                <label className="w-full cursor-pointer">
-                  <div className="w-full border-2 border-purple-300 text-purple-700 hover:bg-purple-50 rounded-md px-4 py-3 flex items-center justify-center gap-2 transition-all">
-                    <Upload className="w-5 h-5" />
-                    <span className="font-medium">Subir desde Galería</span>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </label>
-                
-                <div className="text-center">
-                  <p className="text-xs text-gray-500">o</p>
-                </div>
-
-                {/* Botón 3: Usar Cámara Web (solo desktop) */}
                 <Button
                   onClick={startCamera}
-                  variant="outline"
-                  className="w-full border-pink-300 text-pink-700 hover:bg-pink-50"
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:from-pink-600 hover:to-purple-700 shadow-md"
                 >
                   <Camera className="w-4 h-4 mr-2" />
-                  Usar Cámara Web (Modo Selfie)
+                  {userProfile?.profilePhoto ? 'Cambiar Foto con Cámara' : 'Tomar Foto con Cámara'}
                 </Button>
+                <Button
+                  onClick={() => setUseFileUpload(true)}
+                  variant="outline"
+                  className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  O subir desde archivos
+                </Button>
+              </>
+            )}
+
+            {!isCapturing && !capturedPhoto && useFileUpload && (
+              <>
+                <div className="border-2 border-dashed border-purple-300 rounded-lg p-6 text-center bg-white/50">
+                  <Upload className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-700 mb-3">
+                    Selecciona una foto de tu galería
+                  </p>
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="max-w-full"
+                  />
+                </div>
+                {!cameraError && (
+                  <Button
+                    onClick={() => setUseFileUpload(false)}
+                    variant="outline"
+                    className="w-full border-pink-300 text-pink-700 hover:bg-pink-50"
+                  >
+                    <Camera className="w-4 h-4 mr-2" />
+                    Usar cámara en su lugar
+                  </Button>
+                )}
               </>
             )}
 

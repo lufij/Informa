@@ -1,0 +1,194 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                  COMANDOS PARA PUBLICAR A GITHUB              ║
+╚═══════════════════════════════════════════════════════════════╝
+
+📋 OPCIÓN 1: COMANDOS MANUALES (Copia línea por línea)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Ver estado actual:
+git status
+
+2️⃣ Agregar todos los archivos:
+git add .
+
+3️⃣ Crear commit:
+git commit -m "feat: sistema de compartir en redes sociales y onboarding progresivo"
+
+4️⃣ Configurar remote (solo si es la primera vez):
+git remote add origin https://github.com/lufij/Informa.git
+
+5️⃣ Push a GitHub:
+git push origin main
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 OPCIÓN 2: TODO EN UNO (Copia y pega todo de una vez)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+git add . && git commit -m "feat: sistema de compartir y onboarding progresivo" && git push origin main
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 OPCIÓN 3: USAR SCRIPT AUTOMÁTICO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🪟 WINDOWS (PowerShell):
+PowerShell -ExecutionPolicy Bypass -File scripts/publicar-a-github.ps1
+
+🐧 LINUX/MAC (Bash):
+chmod +x scripts/publicar-a-github.sh
+./scripts/publicar-a-github.sh
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 COMANDOS ÚTILES ADICIONALES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ver historial de commits:
+git log --oneline
+
+Ver cambios antes de commit:
+git diff
+
+Deshacer último commit (mantener cambios):
+git reset --soft HEAD~1
+
+Ver qué remote está configurado:
+git remote -v
+
+Cambiar URL del remote:
+git remote set-url origin https://github.com/lufij/Informa.git
+
+Ver rama actual:
+git branch
+
+Cambiar a rama main:
+git checkout main
+
+Crear nueva rama:
+git checkout -b feature/nueva-funcionalidad
+
+Traer cambios del servidor:
+git pull origin main
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 SOLUCIÓN DE ERRORES COMUNES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ ERROR: "repository not found"
+SOLUCIÓN:
+git remote set-url origin https://github.com/lufij/Informa.git
+
+❌ ERROR: "failed to push some refs"
+SOLUCIÓN:
+git pull origin main --rebase
+git push origin main
+
+❌ ERROR: "Authentication failed"
+SOLUCIÓN:
+- NO uses tu contraseña de GitHub
+- Crea un Personal Access Token:
+  1. GitHub.com → Settings → Developer Settings
+  2. Personal Access Tokens → Tokens (classic)
+  3. Generate New Token
+  4. Marca: repo (completo)
+  5. Copia el token
+  6. Úsalo como contraseña al hacer push
+
+❌ ERROR: "merge conflict"
+SOLUCIÓN:
+git status                    # Ver archivos en conflicto
+# Editar archivos manualmente para resolver
+git add .
+git commit -m "resolve conflicts"
+git push
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ VERIFICAR QUE TODO FUNCIONÓ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abre tu navegador
+2. Ve a: https://github.com/lufij/Informa
+3. Verifica que aparecen los archivos nuevos:
+   ✅ components/ShareButton.tsx
+   ✅ components/DynamicMetaTags.tsx
+   ✅ components/ProgressiveOnboarding.tsx
+   ✅ hooks/useAppInstalled.tsx
+   ✅ Varios archivos .md de documentación
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 ARCHIVOS QUE SE VAN A SUBIR (Total: 13 archivos)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMPONENTES NUEVOS (4):
+✅ /components/ShareButton.tsx
+✅ /components/DynamicMetaTags.tsx
+✅ /components/ProgressiveOnboarding.tsx
+✅ /hooks/useAppInstalled.tsx
+
+DOCUMENTACIÓN NUEVA (8):
+✅ /MEJORAS-COMPARTIR-REDES-SOCIALES.md
+✅ /GUIA-IMPLEMENTACION-COMPARTIR.md
+✅ /IDEAS-ESPECIFICAS-GUALAN.md
+✅ /RESUMEN-MEJORAS-COMPARTIR.md
+✅ /GUIA-ONBOARDING-PROGRESIVO.md
+✅ /RESUMEN-ONBOARDING.md
+✅ /RESUMEN-COMPLETO-SESION.md
+✅ /GUIA-PUBLICAR-GITHUB.md
+
+SCRIPTS (2):
+✅ /scripts/publicar-a-github.sh
+✅ /scripts/publicar-a-github.ps1
+
+MODIFICADOS (1):
+✅ /components/PostActions.tsx
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 DESPUÉS DE PUBLICAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Si usas Vercel (deploy automático):
+   - Espera 2-3 minutos
+   - Vercel detectará el push y hará deploy automáticamente
+   - Verifica en: https://vercel.com/dashboard
+
+2️⃣ Si necesitas deploy manual:
+   npm run deploy:vercel
+
+3️⃣ Verificar en producción:
+   - Abre tu URL de producción
+   - Prueba en móvil
+   - Comparte una noticia en WhatsApp para verificar preview
+
+4️⃣ Probar localmente primero (recomendado):
+   npm install       # Instalar dependencias
+   npm run build     # Verificar que compila
+   npm run dev       # Probar en localhost
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 ¿NECESITAS AYUDA?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si algo no funciona:
+1. Copia el error EXACTO que aparece
+2. Busca en Google: "git [tu error]"
+3. Lee la sección de "Solución de Errores" arriba
+4. O pregúntame el error específico
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ ¡LISTO PARA PUBLICAR!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Elige una de las 3 opciones de arriba y ¡adelante! 🚀
+
+
+╔═══════════════════════════════════════════════════════════════╗
+║              RECOMENDACIÓN: USA OPCIÓN 2 (TODO EN UNO)        ║
+║   Es la más rápida y simple - solo copia y pega una línea    ║
+╚═══════════════════════════════════════════════════════════════╝

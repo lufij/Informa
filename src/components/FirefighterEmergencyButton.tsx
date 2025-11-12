@@ -34,105 +34,47 @@ export function FirefighterEmergencyButton({ token, userProfile, onEmergencyPubl
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
       recognitionRef.current = new SpeechRecognition()
-      recognitionRef.current.continuous = false // Changed to false for better accuracy
-      recognitionRef.current.interimResults = false // Changed to false to avoid duplicates
+      recognitionRef.current.continuous = true
+      recognitionRef.current.interimResults = true
       recognitionRef.current.lang = 'es-GT' // Spanish (Guatemala)
-      recognitionRef.current.maxAlternatives = 1 // Only get best result
 
       recognitionRef.current.onresult = (event: any) => {
-        console.log('🎤 Speech recognition result:', event)
-        
-        // Get the last result (most recent)
-        const lastResultIndex = event.results.length - 1
-        const lastResult = event.results[lastResultIndex]
-        
-        if (lastResult.isFinal) {
-          const transcriptPiece = lastResult[0].transcript
-          console.log('✅ Final transcript piece:', transcriptPiece)
-          
-          setTranscript(prev => {
-            // Add space before new text if prev is not empty and doesn't end with space
-            const separator = prev && !prev.endsWith(' ') ? ' ' : ''
-            const newText = prev + separator + transcriptPiece
-            console.log('📝 Updated transcript:', newText)
-            return newText
-          })
-          
-          // Auto-restart to continue listening
-          if (isListening) {
-            try {
-              setTimeout(() => {
-                if (recognitionRef.current && isListening) {
-                  recognitionRef.current.start()
-                }
-              }, 100)
-            } catch (error) {
-              console.log('Recognition already started or stopped')
-            }
+        let finalTranscript = ''
+        let interimTranscript = ''
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcriptPiece = event.results[i][0].transcript
+          if (event.results[i].isFinal) {
+            finalTranscript += transcriptPiece + ' '
+          } else {
+            interimTranscript += transcriptPiece
           }
         }
+
+        setTranscript(prev => {
+          const newText = prev + finalTranscript
+          return newText
+        })
       }
 
       recognitionRef.current.onerror = (event: any) => {
-        console.error('🎤 Speech recognition error:', event.error)
-        
         // Only log unexpected errors (not permission or no-speech issues)
         if (event.error !== 'no-speech' && event.error !== 'not-allowed' && event.error !== 'aborted') {
           console.error('Speech recognition error:', event.error)
         }
         
         if (event.error === 'no-speech') {
-          // Don't show error, just restart
-          if (isListening) {
-            try {
-              setTimeout(() => {
-                if (recognitionRef.current && isListening) {
-                  recognitionRef.current.start()
-                }
-              }, 100)
-            } catch (error) {
-              console.log('Recognition already started or stopped')
-            }
-          }
+          toast.error('No se detectó voz. Intenta de nuevo.')
         } else if (event.error === 'not-allowed') {
           toast.error('Permiso de micrófono denegado. Por favor, habilita el micrófono en tu navegador.', {
             description: 'Busca el ícono del micrófono 🎤 en la barra de direcciones de tu navegador y permite el acceso.'
           })
-          setIsListening(false)
-        } else if (event.error === 'aborted') {
-          // Intentionally stopped, don't restart
-          setIsListening(false)
-        } else {
-          // Other errors, try to restart
-          if (isListening) {
-            try {
-              setTimeout(() => {
-                if (recognitionRef.current && isListening) {
-                  recognitionRef.current.start()
-                }
-              }, 100)
-            } catch (error) {
-              console.log('Recognition already started or stopped')
-            }
-          }
         }
+        setIsListening(false)
       }
 
       recognitionRef.current.onend = () => {
-        console.log('🎤 Speech recognition ended')
-        // Auto-restart if still listening (except if manually stopped)
-        if (isListening) {
-          try {
-            setTimeout(() => {
-              if (recognitionRef.current && isListening) {
-                console.log('🔄 Auto-restarting recognition')
-                recognitionRef.current.start()
-              }
-            }, 100)
-          } catch (error) {
-            console.log('Recognition already started or stopped')
-          }
-        }
+        setIsListening(false)
       }
     }
 
@@ -168,21 +110,14 @@ export function FirefighterEmergencyButton({ token, userProfile, onEmergencyPubl
   }
 
   const stopListening = () => {
-    console.log('🛑 Stopping recognition...')
-    setIsListening(false) // Set FIRST to prevent auto-restart
-    
-    if (recognitionRef.current) {
+    if (recognitionRef.current && isListening) {
       try {
         recognitionRef.current.stop()
-        console.log('✅ Recognition stopped')
       } catch (error) {
-        console.log('Recognition already stopped or error:', error)
+        // Ignore errors when stopping
       }
+      setIsListening(false)
     }
-    
-    toast.success('🎤 Grabación detenida', {
-      description: 'Puedes editar el texto antes de publicar'
-    })
   }
 
   const handlePublish = async () => {

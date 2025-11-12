@@ -135,10 +135,5 @@
     }
   },
   "related_applications": [],
-  "prefer_related_applications": false,
-  "permissions": [
-    "notifications",
-    "push"
-  ],
-  "gcm_sender_id": "103953800507"
+  "prefer_related_applications": false
 }

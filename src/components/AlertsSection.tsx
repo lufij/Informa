@@ -13,8 +13,6 @@ import { ProfilePhotoGuard } from './ProfilePhotoGuard'
 import { PostActions } from './PostActions'
 import { UserAvatar } from './UserAvatar'
 import { ImageViewer } from './ImageViewer'
-import { optimizeMediaFile } from '../utils/imageOptimization'
-import { LazyImage } from './LazyImage'
 
 interface MediaFile {
   url: string
@@ -132,26 +130,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
       )
       if (response.ok) {
         const data = await response.json()
-        console.log('Fetched alerts:', data)
-        
-        // Normalize alerts: ensure both mediaFiles and mediaUrls are handled correctly
-        const normalizedAlerts = data.map((alert: Alert) => {
-          // Ensure both formats are present for compatibility
-          if (!alert.mediaFiles || alert.mediaFiles.length === 0) {
-            // If no mediaFiles but has mediaUrls, convert them
-            if (alert.mediaUrls && alert.mediaUrls.length > 0) {
-              alert.mediaFiles = alert.mediaUrls.map((url: string) => ({
-                url,
-                type: url.includes('.mp4') || url.includes('.webm') ? 'video/mp4' : 'image/jpeg',
-                fileName: url.split('/').pop() || 'media'
-              }))
-            }
-          }
-          return alert
-        })
-        
-        console.log('Normalized alerts:', normalizedAlerts)
-        setAlerts(normalizedAlerts)
+        setAlerts(data)
       }
     } catch (error) {
       console.error('Error al cargar alertas:', error)
@@ -161,7 +140,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
     }
   }
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     
     // Validate file types
@@ -174,20 +153,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
       toast.error('Algunos archivos no son válidos. Solo se permiten imágenes y videos.')
     }
 
-    // Optimize files before adding them
-    const optimizedFiles: File[] = []
-    for (const file of validFiles) {
-      try {
-        const optimized = await optimizeMediaFile(file)
-        const optimizedFile = new File([optimized], file.name, { type: optimized.type })
-        optimizedFiles.push(optimizedFile)
-      } catch (error) {
-        console.error('Error optimizing file:', error)
-        optimizedFiles.push(file)
-      }
-    }
-
-    setSelectedFiles(prev => [...prev, ...optimizedFiles])
+    setSelectedFiles(prev => [...prev, ...validFiles])
   }
 
   const removeFile = (index: number) => {
@@ -358,90 +324,31 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
   }
 
   const openEditDialog = (alert: Alert) => {
-    console.log('Opening edit dialog with alert:', alert)
-    console.log('Alert mediaFiles:', alert.mediaFiles)
-    console.log('Alert mediaUrls:', alert.mediaUrls)
     setEditingAlert(alert)
     setEditDescription(alert.description || alert.message)
-    
-    // Show existing media files as previews
-    const existingPreviews: string[] = []
-    
-    // Handle both mediaFiles and mediaUrls formats
-    if (alert.mediaFiles && alert.mediaFiles.length > 0) {
-      existingPreviews.push(...alert.mediaFiles.map((m: any) => m.url || m))
-    }
-    if (alert.mediaUrls && alert.mediaUrls.length > 0) {
-      existingPreviews.push(...alert.mediaUrls)
-    }
-    
-    console.log('Setting edit previews:', existingPreviews)
-    setEditMediaPreviews(existingPreviews)
+    setEditMediaPreviews(alert.mediaUrls || [])
     setEditMediaFiles([])
     setIsEditDialogOpen(true)
   }
 
-  const handleEditMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
-    // Validate file types
-    const validFiles = files.filter(file => {
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime']
-      return validTypes.includes(file.type)
-    })
-
-    if (validFiles.length !== files.length) {
-      toast.error('Algunos archivos no son válidos. Solo se permiten imágenes y videos.')
-    }
-
-    // Optimize files before adding them
-    const optimizedFiles: File[] = []
-    for (const file of validFiles) {
-      try {
-        const optimized = await optimizeMediaFile(file)
-        const optimizedFile = new File([optimized], file.name, { type: optimized.type })
-        optimizedFiles.push(optimizedFile)
-      } catch (error) {
-        console.error('Error optimizing file:', error)
-        optimizedFiles.push(file)
-      }
-    }
-
-    setEditMediaFiles(prev => [...prev, ...optimizedFiles])
+    setEditMediaFiles(prev => [...prev, ...files])
     
-    const previews = optimizedFiles.map(file => URL.createObjectURL(file))
+    const previews = files.map(file => URL.createObjectURL(file))
     setEditMediaPreviews(prev => [...prev, ...previews])
   }
 
   const removeEditMedia = (index: number) => {
-    const totalExistingMedia = (
-      (editingAlert?.mediaFiles?.length || 0) + 
-      (editingAlert?.mediaUrls?.length || 0)
-    )
-    
     setEditMediaPreviews(prev => prev.filter((_, i) => i !== index))
-    
-    if (index >= totalExistingMedia) {
-      // Removing newly added file
-      const fileIndex = index - totalExistingMedia
-      setEditMediaFiles(prev => prev.filter((_, i) => i !== fileIndex))
+    if (index < (editingAlert?.mediaUrls?.length || 0)) {
+      // Removing existing media - will need to handle server-side
     } else {
-      // Removing existing media - update editingAlert
-      if (editingAlert) {
-        const mediaFilesCount = editingAlert.mediaFiles?.length || 0
-        
-        if (index < mediaFilesCount) {
-          // Removing from mediaFiles
-          const updatedMediaFiles = (editingAlert.mediaFiles || []).filter((_, i) => i !== index)
-          setEditingAlert({ ...editingAlert, mediaFiles: updatedMediaFiles })
-        } else {
-          // Removing from mediaUrls
-          const urlIndex = index - mediaFilesCount
-          const updatedMediaUrls = (editingAlert.mediaUrls || []).filter((_, i) => i !== urlIndex)
-          setEditingAlert({ ...editingAlert, mediaUrls: updatedMediaUrls })
-        }
-      }
+      // Removing newly added file
+      const fileIndex = index - (editingAlert?.mediaUrls?.length || 0)
+      setEditMediaFiles(prev => prev.filter((_, i) => i !== fileIndex))
     }
   }
 
@@ -452,12 +359,13 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
     setIsUpdating(true)
 
     try {
-      // Upload new media files individually
-      const newMediaFiles: MediaFile[] = []
-      
-      for (const file of editMediaFiles) {
+      // Upload new media files if any
+      let newMediaUrls: string[] = []
+      if (editMediaFiles && editMediaFiles.length > 0) {
         const formData = new FormData()
-        formData.append('file', file)
+        editMediaFiles.forEach(file => {
+          formData.append('files', file)
+        })
 
         const uploadResponse = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/upload`,
@@ -472,29 +380,13 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
 
         if (uploadResponse.ok) {
           const uploadData = await uploadResponse.json()
-          newMediaFiles.push(uploadData)
-        } else {
-          const error = await uploadResponse.json()
-          toast.error(`Error al subir ${file.name}: ${error.error}`)
+          newMediaUrls = uploadData.urls || []
         }
       }
 
-      // Combine existing and new media correctly
-      const existingMedia = editingAlert.mediaFiles || []
-      const allMediaFiles = [...existingMedia, ...newMediaFiles]
-      
-      // Also handle mediaUrls for compatibility
+      // Combine existing and new media URLs
       const existingUrls = editingAlert.mediaUrls || []
-      const newUrls = newMediaFiles.map(media => media.url)
-      const allMediaUrls = [...existingUrls, ...newUrls]
-
-      console.log('Updating alert with:', {
-        description: editDescription,
-        existingMedia,
-        newMediaFiles,
-        allMediaFiles,
-        allMediaUrls
-      })
+      const allMediaUrls = [...existingUrls, ...newMediaUrls]
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/alerts/${editingAlert.id}`,
@@ -506,21 +398,20 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
           },
           body: JSON.stringify({
             description: editDescription,
-            mediaFiles: allMediaFiles,
             mediaUrls: allMediaUrls
           })
         }
       )
 
       if (response.ok) {
+        const updatedAlert = await response.json()
+        setAlerts(alerts.map(a => a.id === editingAlert.id ? updatedAlert : a))
         setIsEditDialogOpen(false)
         setEditingAlert(null)
         setEditDescription('')
         setEditMediaFiles([])
         setEditMediaPreviews([])
         toast.success('¡Emergencia actualizada!')
-        // Refresh alerts to get the latest data from server
-        await fetchAlerts()
       } else {
         const error = await response.json()
         toast.error(error.error || 'Error al actualizar emergencia')
@@ -738,7 +629,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                 Nueva Alerta
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-orange-600" />
@@ -748,7 +639,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                   Comparte información importante con tu comunidad
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreateAlert} className="space-y-4 pb-4">
+              <form onSubmit={handleCreateAlert} className="space-y-4">
                 {/* Tipo de alerta con botones grandes y visuales */}
                 <div className="space-y-2">
                   <Label>Tipo de alerta</Label>
@@ -846,11 +737,10 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                 {/* Fotos y videos */}
                 <div className="space-y-2">
                   <Label>Agregar fotos o videos (opcional)</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Tomar Foto */}
-                    <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-orange-300 rounded-lg cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-colors">
-                      <Image className="w-4 h-4 text-orange-600" />
-                      <span className="text-sm font-medium">📷 Tomar Foto</span>
+                  <div className="flex flex-wrap gap-2">
+                    <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors">
+                      <Image className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm">Fotos</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -860,41 +750,13 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                         className="hidden"
                       />
                     </label>
-                    
-                    {/* Grabar Video */}
-                    <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-red-300 rounded-lg cursor-pointer hover:border-red-500 hover:bg-red-50 transition-colors">
-                      <Video className="w-4 h-4 text-red-600" />
-                      <span className="text-sm font-medium">🎥 Grabar</span>
+                    <label className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors">
+                      <Video className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm">Videos</span>
                       <input
                         type="file"
                         accept="video/*"
                         capture="environment"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                    </label>
-                    
-                    {/* Galería de Fotos */}
-                    <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
-                      <Image className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium">🖼️ Galería</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                    </label>
-                    
-                    {/* Videos Guardados */}
-                    <label className="flex items-center gap-2 px-3 py-2 border-2 border-dashed border-purple-300 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors">
-                      <Video className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm font-medium">📹 Videos</span>
-                      <input
-                        type="file"
-                        accept="video/*"
-                        multiple
                         onChange={handleFileSelect}
                         className="hidden"
                       />
@@ -1084,7 +946,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                       <div key={`file-${idx}`} className="rounded-xl overflow-hidden bg-gray-100 relative group">
                         {media.type.startsWith('image/') ? (
                           <>
-                            <LazyImage
+                            <img
                               src={media.url}
                               alt={`Foto de alerta ${idx + 1}`}
                               className="w-full h-auto object-contain cursor-pointer transition-transform duration-300 group-hover:scale-105"
@@ -1319,7 +1181,7 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
 
       {/* Edit Emergency Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-gradient-to-br from-red-50 to-orange-50 border-4 border-red-500">
+        <DialogContent className="max-w-lg bg-gradient-to-br from-red-50 to-orange-50 border-4 border-red-500">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <Edit className="w-5 h-5 text-red-600" />
@@ -1352,110 +1214,34 @@ export function AlertsSection({ token, userProfile, onRequestAuth, onOpenSetting
                 <Camera className="w-4 h-4" />
                 Agregar más fotos/videos
               </Label>
-              
-              {/* Upload Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleEditMediaSelect}
-                    disabled={isUpdating}
-                    className="hidden"
-                  />
-                  <div className="flex items-center justify-center gap-2 p-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
-                    <Camera className="w-4 h-4" />
-                    <span className="text-sm font-medium">Tomar Foto</span>
-                  </div>
-                </label>
-                
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="video/*"
-                    capture="environment"
-                    onChange={handleEditMediaSelect}
-                    disabled={isUpdating}
-                    className="hidden"
-                  />
-                  <div className="flex items-center justify-center gap-2 p-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors">
-                    <Video className="w-4 h-4" />
-                    <span className="text-sm font-medium">Grabar Video</span>
-                  </div>
-                </label>
-                
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleEditMediaSelect}
-                    disabled={isUpdating}
-                    className="hidden"
-                  />
-                  <div className="flex items-center justify-center gap-2 p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
-                    <Image className="w-4 h-4" />
-                    <span className="text-sm font-medium">Galería</span>
-                  </div>
-                </label>
-                
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="video/*"
-                    multiple
-                    onChange={handleEditMediaSelect}
-                    disabled={isUpdating}
-                    className="hidden"
-                  />
-                  <div className="flex items-center justify-center gap-2 p-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors">
-                    <Play className="w-4 h-4" />
-                    <span className="text-sm font-medium">Videos</span>
-                  </div>
-                </label>
-              </div>
+              <input
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={handleEditMediaSelect}
+                disabled={isUpdating}
+                className="w-full text-sm"
+              />
               
               {/* Media Previews */}
               {editMediaPreviews.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
-                    Archivos multimedia ({editMediaPreviews.length})
-                  </p>
-                  <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                    {editMediaPreviews.map((preview, index) => {
-                      const isExisting = index < (editingAlert?.mediaFiles?.length || 0)
-                      const isVideo = preview.includes('.mp4') || preview.includes('.webm') || preview.includes('video/')
-                      
-                      return (
-                        <div key={index} className="relative group">
-                          {isVideo ? (
-                            <div className="w-full h-20 bg-purple-100 rounded-lg border-2 border-purple-300 flex items-center justify-center">
-                              <Play className="w-8 h-8 text-purple-600" />
-                            </div>
-                          ) : (
-                            <img
-                              src={preview}
-                              alt={`Preview ${index + 1}`}
-                              className="w-full h-20 object-cover rounded-lg border-2 border-red-300"
-                            />
-                          )}
-                          {isExisting && (
-                            <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 rounded">
-                              ✓
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeEditMedia(index)}
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {editMediaPreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-20 object-cover rounded-lg border-2 border-red-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeEditMedia(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

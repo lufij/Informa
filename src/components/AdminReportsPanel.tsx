@@ -5,9 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
 import { ScrollArea } from './ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
-import { Textarea } from './ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { AlertTriangle, X, Eye, Shield, Trash2, Ban, UserX, RefreshCw, History, AlertCircle } from 'lucide-react'
+import { Input } from './ui/input'
+import { AlertTriangle, Check, X, Eye, Shield, Trash2, Ban, UserX, RefreshCw, History, AlertCircle, User } from 'lucide-react'
 import { projectId } from '../utils/supabase/info'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
@@ -22,6 +21,7 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from './ui/alert-dialog'
+import { Textarea } from './ui/textarea'
 
 interface Report {
   id: string
@@ -92,12 +92,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
   // Confirmation dialogs
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean, report: Report | null }>({ open: false, report: null })
   const [banDialog, setBanDialog] = useState<{ open: boolean, report: Report | null }>({ open: false, report: null })
-  const [vetDialog, setVetDialog] = useState<{ open: boolean, report: Report | null }>({ open: false, report: null })
-  const [blockDialog, setBlockDialog] = useState<{ open: boolean, report: Report | null }>({ open: false, report: null })
   const [banReason, setBanReason] = useState('')
-  const [vetReason, setVetReason] = useState('')
-  const [blockReason, setBlockReason] = useState('')
-  const [vetDuration, setVetDuration] = useState('7')
   
   const isAdmin = userProfile?.role === 'admin'
 
@@ -264,7 +259,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
 
       if (response.ok) {
         setReports(reports.map(r => 
-          r.id === reportId ? { ...r, status: status as Report['status'] } : r
+          r.id === reportId ? { ...r, status } : r
         ))
         toast.success('Estado actualizado')
       } else {
@@ -360,107 +355,21 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ reason: banReason, type: 'permanent' })
+          body: JSON.stringify({ reason: banReason })
         }
       )
 
       if (response.ok) {
-        toast.success('Usuario baneado permanentemente')
+        toast.success('Usuario baneado exitosamente')
         setBanDialog({ open: false, report: null })
         setBanReason('')
         await fetchModerationLog()
-        await fetchReports()
       } else {
         toast.error('Error al banear usuario')
       }
     } catch (error) {
       console.error('Error banning user:', error)
       toast.error('Error al banear usuario')
-    }
-  }
-  
-  const vetUser = async (report: Report) => {
-    if (!vetReason.trim()) {
-      toast.error('Debes proporcionar una razón para el vetado')
-      return
-    }
-    
-    try {
-      const content = contentDataMap[`${report.contentType}:${report.contentId}`]
-      if (!content) {
-        toast.error('No se encontró el contenido')
-        return
-      }
-      
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/users/${content.authorId}/vet`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ 
-            reason: vetReason, 
-            duration: parseInt(vetDuration),
-            type: 'temporary'
-          })
-        }
-      )
-
-      if (response.ok) {
-        toast.success(`Usuario vetado por ${vetDuration} días`)
-        setVetDialog({ open: false, report: null })
-        setVetReason('')
-        setVetDuration('7')
-        await fetchModerationLog()
-        await fetchReports()
-      } else {
-        toast.error('Error al vetar usuario')
-      }
-    } catch (error) {
-      console.error('Error vetting user:', error)
-      toast.error('Error al vetar usuario')
-    }
-  }
-  
-  const blockUser = async (report: Report) => {
-    if (!blockReason.trim()) {
-      toast.error('Debes proporcionar una razón para el bloqueo')
-      return
-    }
-    
-    try {
-      const content = contentDataMap[`${report.contentType}:${report.contentId}`]
-      if (!content) {
-        toast.error('No se encontró el contenido')
-        return
-      }
-      
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-3467f1c6/users/${content.authorId}/block`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ reason: blockReason, type: 'block' })
-        }
-      )
-
-      if (response.ok) {
-        toast.success('Usuario bloqueado exitosamente')
-        setBlockDialog({ open: false, report: null })
-        setBlockReason('')
-        await fetchModerationLog()
-        await fetchReports()
-      } else {
-        toast.error('Error al bloquear usuario')
-      }
-    } catch (error) {
-      console.error('Error blocking user:', error)
-      toast.error('Error al bloquear usuario')
     }
   }
 
@@ -477,7 +386,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
 
   const getContentTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      news: 'Noticia',
+      news: 'Chisme',
       alert: 'Alerta',
       classified: 'Clasificado',
       forum: 'Conversación',
@@ -494,10 +403,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
       restore_post: '♻️ Publicación restaurada',
       block_user: '⏸️ Usuario bloqueado',
       ban_user: '🚫 Usuario baneado',
-      vet_user: '⚠️ Usuario vetado',
-      unban_user: '✅ Usuario desbaneado',
-      unvet_user: '✅ Usuario desvetado',
-      unblock_user: '✅ Usuario desbloqueado'
+      unban_user: '✅ Usuario desbaneado'
     }
     return labels[action] || action
   }
@@ -531,66 +437,74 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="!w-screen !h-screen !max-w-none !top-0 !left-0 !translate-x-0 !translate-y-0 sm:!w-[95vw] sm:!h-[90vh] sm:!max-w-6xl sm:!max-h-[90vh] sm:!top-[50%] sm:!left-[50%] sm:!translate-x-[-50%] sm:!translate-y-[-50%] flex flex-col bg-white p-3 sm:p-6 overflow-hidden !rounded-none sm:!rounded-lg border-0 sm:border">
-          <DialogHeader className="pb-3 sm:pb-4 flex-shrink-0">
+        <DialogContent className="max-w-4xl max-h-[85vh] sm:max-h-[90vh] flex flex-col bg-gradient-to-br from-white to-red-50 w-[95vw] sm:w-full p-4 sm:p-6">
+          <DialogHeader className="space-y-2">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="bg-red-500 p-1.5 sm:p-2 rounded-full">
+              <div className="bg-gradient-to-r from-red-500 to-orange-500 p-1.5 sm:p-2 rounded-full flex-shrink-0">
                 <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <div className="flex-1">
-                <DialogTitle className="text-lg sm:text-xl font-semibold">
-                  Panel de Moderación
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="flex items-center gap-2 flex-wrap text-base sm:text-lg">
+                  <span className="whitespace-nowrap">Panel de Moderación</span>
                   {pendingCount > 0 && (
-                    <Badge className="ml-2 bg-red-500 text-white text-xs">
+                    <Badge className="bg-red-500 text-white animate-pulse text-xs">
                       {pendingCount}
                     </Badge>
                   )}
                 </DialogTitle>
-                <DialogDescription className="text-sm sm:text-base text-gray-600">
-                  Gestiona reportes y usuarios
-                </DialogDescription>
               </div>
             </div>
+            <DialogDescription className="text-xs sm:text-sm">
+              Gestiona reportes y usuarios
+            </DialogDescription>
           </DialogHeader>
           
           {/* Main Tabs */}
-          <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid grid-cols-3 w-full mb-2 sm:mb-4 h-auto">
-              <TabsTrigger value="reports" className="text-xs sm:text-sm py-2">
-                <span className="hidden sm:inline">Reportes ({reports.length})</span>
-                <span className="sm:hidden">Rep. ({reports.length})</span>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
+            <TabsList className={`w-full grid ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} gap-1 h-auto p-1`}>
+              <TabsTrigger value="reports" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2">
+                <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Reportes</span>
+                <span className="sm:hidden">Rep.</span>
+                <span className="text-[10px] sm:text-xs">({reports.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="log" className="text-xs sm:text-sm py-2">
+              <TabsTrigger value="log" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2">
+                <History className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                 <span className="hidden sm:inline">Historial</span>
                 <span className="sm:hidden">Hist.</span>
               </TabsTrigger>
               {isAdmin && (
-                <TabsTrigger value="moderators" className="text-xs sm:text-sm py-2">
-                  <span className="hidden sm:inline">Usuarios</span>
-                  <span className="sm:hidden">Users</span>
+                <TabsTrigger value="moderators" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2">
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">Moderadores</span>
+                  <span className="sm:hidden">Mods.</span>
                 </TabsTrigger>
               )}
             </TabsList>
             
-            <TabsContent value="reports" className="flex-1 flex flex-col overflow-hidden">
-              <Tabs value={filter} onValueChange={(v: string) => setFilter(v as any)} className="w-full mb-2 sm:mb-4">
-                <TabsList className="w-full grid grid-cols-3 h-auto">
-                  <TabsTrigger value="pending" className="text-xs sm:text-sm py-1.5 sm:py-2 px-1">
-                    <span className="hidden sm:inline">Pendientes ({reports.filter(r => r.status === 'pending').length})</span>
-                    <span className="sm:hidden">Pend. ({reports.filter(r => r.status === 'pending').length})</span>
+            <TabsContent value="reports" className="flex-1 flex flex-col mt-2 sm:mt-4 min-h-0">
+              {/* Filters */}
+              <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-full">
+                <TabsList className="w-full grid grid-cols-3 gap-1 h-auto p-1">
+                  <TabsTrigger value="pending" className="text-[10px] sm:text-sm py-1.5 sm:py-2 px-1 sm:px-3">
+                    <span className="hidden sm:inline">Pend.</span>
+                    <span className="sm:hidden">P</span>
+                    <span className="ml-1">({reports.filter(r => r.status === 'pending').length})</span>
                   </TabsTrigger>
-                  <TabsTrigger value="reviewed" className="text-xs sm:text-sm py-1.5 sm:py-2 px-1">
-                    <span className="hidden sm:inline">Revisados ({reports.filter(r => r.status !== 'pending').length})</span>
-                    <span className="sm:hidden">Rev. ({reports.filter(r => r.status !== 'pending').length})</span>
+                  <TabsTrigger value="reviewed" className="text-[10px] sm:text-sm py-1.5 sm:py-2 px-1 sm:px-3">
+                    <span className="hidden sm:inline">Rev.</span>
+                    <span className="sm:hidden">R</span>
+                    <span className="ml-1">({reports.filter(r => r.status !== 'pending').length})</span>
                   </TabsTrigger>
-                  <TabsTrigger value="all" className="text-xs sm:text-sm py-1.5 sm:py-2 px-1">
-                    <span className="hidden sm:inline">Todos ({reports.length})</span>
-                    <span className="sm:hidden">All ({reports.length})</span>
+                  <TabsTrigger value="all" className="text-[10px] sm:text-sm py-1.5 sm:py-2 px-1 sm:px-3">
+                    <span className="hidden sm:inline">Todos</span>
+                    <span className="sm:hidden">T</span>
+                    <span className="ml-1">({reports.length})</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
 
-              <ScrollArea className="flex-1 pr-2 sm:pr-4">
+              <ScrollArea className="flex-1 pr-2 sm:pr-4 -mr-2 sm:-mr-4">
                 {isLoading ? (
                   <div className="flex items-center justify-center h-32">
                     <div className="text-sm sm:text-base text-gray-500">Cargando reportes...</div>
@@ -600,11 +514,11 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                     <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mb-2" />
                     <p className="text-sm sm:text-base text-gray-500">No hay reportes</p>
                     <p className="text-xs sm:text-sm text-gray-400">
-                      {filter === 'pending' ? 'No hay reportes pendientes' : 'Cambia el filtro para ver otros reportes'}
+                      {filter === 'pending' ? 'No hay reportes pendientes' : 'Cambia el filtro'}
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-2 sm:space-y-3 pb-2">
+                  <div className="space-y-3 sm:space-y-4 mt-3 sm:mt-4 pr-2">
                     <AnimatePresence>
                       {Object.entries(groupedReports).map(([contentKey, contentReports]) => {
                         const firstReport = contentReports[0]
@@ -644,24 +558,24 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                 }
                               }}
                             >
-                              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-4 pt-3 sm:pt-4">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 space-y-1.5 sm:space-y-2">
-                                    <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                                      <Badge variant="outline" className="text-xs px-1.5 py-0">
+                              <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
+                                <div className="flex items-start justify-between gap-2 sm:gap-3">
+                                  <div className="flex-1 space-y-2">
+                                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                      <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
                                         {getContentTypeLabel(firstReport.contentType)}
                                       </Badge>
-                                      <Badge className="bg-red-500 text-white text-xs px-1.5 py-0">
+                                      <Badge className="bg-red-500 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
                                         {reportCount} {reportCount === 1 ? 'rep.' : 'reps.'}
                                       </Badge>
                                       {pendingReports > 0 && (
-                                        <Badge className="bg-orange-500 text-white text-xs px-1.5 py-0">
+                                        <Badge className="bg-orange-500 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
                                           {pendingReports} pend.
                                         </Badge>
                                       )}
                                       {content?.hidden && (
-                                        <Badge className="bg-orange-600 text-white text-xs px-1.5 py-0">
-                                          ⚠️ Oculto
+                                        <Badge className="bg-orange-600 text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
+                                          ⚠️ Ocultado
                                         </Badge>
                                       )}
                                     </div>
@@ -669,7 +583,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                     {/* Content Preview */}
                                     {content && (
                                       <div className="bg-white/50 rounded p-2 sm:p-3 border border-gray-200">
-                                        <p className="text-xs sm:text-sm text-gray-800 mb-1 line-clamp-2 break-words">
+                                        <p className="text-xs sm:text-sm text-gray-800 mb-1 line-clamp-2">
                                           {getContentTitle(firstReport)}
                                         </p>
                                         <p className="text-[10px] sm:text-xs text-gray-500">
@@ -680,100 +594,78 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                     
                                     {/* Report Details */}
                                     <div className="space-y-1">
-                                      {contentReports.slice(0, 3).map((report) => (
+                                      {contentReports.slice(0, 2).map((report) => (
                                         <div key={report.id} className="text-[11px] sm:text-xs text-gray-600 flex items-start gap-1.5 sm:gap-2">
                                           <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
                                           <div className="flex-1 min-w-0">
                                             <span className="font-medium">{getReasonLabel(report.reason)}</span>
                                             {report.description && (
-                                              <span className="text-gray-500 block sm:inline sm:before:content-['-'] sm:before:mx-1 break-words">
+                                              <span className="text-gray-500 block sm:inline sm:before:content-['-'] sm:before:mx-1 truncate">
                                                 {report.description}
                                               </span>
                                             )}
-                                            <div className="text-[10px] text-gray-400">
-                                              {new Date(report.createdAt).toLocaleString('es-GT')}
+                                            <div className="text-[9px] sm:text-[10px] text-gray-400">
+                                              {new Date(report.createdAt).toLocaleString('es-GT', { 
+                                                day: '2-digit', 
+                                                month: '2-digit', 
+                                                hour: '2-digit', 
+                                                minute: '2-digit' 
+                                              })}
                                             </div>
                                           </div>
                                         </div>
                                       ))}
-                                      {contentReports.length > 3 && (
+                                      {contentReports.length > 2 && (
                                         <p className="text-[10px] sm:text-xs text-gray-500 italic">
-                                          +{contentReports.length - 3} más...
+                                          +{contentReports.length - 2} más (clic para ver)
                                         </p>
                                       )}
                                     </div>
                                   </div>
                                 </div>
                               </CardHeader>
-                              <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4">
-                                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                              <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
                                   {/* Actions for pending reports */}
                                   {pendingReports > 0 && content && !content.hidden && (
                                     <>
-                                      {/* Post Actions */}
                                       <Button
                                         size="sm"
-                                        onClick={(e: React.MouseEvent) => {
+                                        onClick={(e) => {
                                           e.stopPropagation()
                                           setDeleteDialog({ open: true, report: firstReport })
                                         }}
-                                        className="bg-red-600 hover:bg-red-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
+                                        className="bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm h-8 sm:h-9"
                                       >
-                                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
+                                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                                         <span className="hidden sm:inline">Eliminar Post</span>
+                                        <span className="sm:hidden">Eliminar</span>
                                       </Button>
-                                      
-                                      {/* User Moderation Actions */}
-                                      <Button
-                                        size="sm"
-                                        onClick={(e: React.MouseEvent) => {
-                                          e.stopPropagation()
-                                          setVetDialog({ open: true, report: firstReport })
-                                        }}
-                                        className="bg-yellow-600 hover:bg-yellow-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
-                                      >
-                                        <Ban className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
-                                        <span className="hidden sm:inline">Vetar Usuario</span>
-                                      </Button>
-                                      
-                                      <Button
-                                        size="sm"
-                                        onClick={(e: React.MouseEvent) => {
-                                          e.stopPropagation()
-                                          setBlockDialog({ open: true, report: firstReport })
-                                        }}
-                                        className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
-                                      >
-                                        <UserX className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
-                                        <span className="hidden sm:inline">Bloquear</span>
-                                      </Button>
-                                      
                                       {isAdmin && (
                                         <Button
                                           size="sm"
-                                          onClick={(e: React.MouseEvent) => {
+                                          onClick={(e) => {
                                             e.stopPropagation()
                                             setBanDialog({ open: true, report: firstReport })
                                           }}
-                                          className="bg-purple-600 hover:bg-purple-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
+                                          className="bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm h-8 sm:h-9"
                                         >
-                                          <UserX className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
-                                          <span className="hidden sm:inline">Banear</span>
+                                          <UserX className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                          <span className="hidden sm:inline">Banear Usuario</span>
+                                          <span className="sm:hidden">Banear</span>
                                         </Button>
                                       )}
-                                      
-                                      {/* Other Actions */}
                                       <Button
                                         size="sm"
-                                        onClick={(e: React.MouseEvent) => {
+                                        onClick={(e) => {
                                           e.stopPropagation()
                                           contentReports.forEach(r => updateReportStatus(r.id, 'dismissed'))
                                         }}
                                         variant="outline"
-                                        className="text-[10px] sm:text-xs px-2 py-1.5 h-auto"
+                                        className="text-xs sm:text-sm h-8 sm:h-9"
                                       >
-                                        <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
-                                        <span className="hidden sm:inline">Descartar</span>
+                                        <X className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                        Descartar
                                       </Button>
                                     </>
                                   )}
@@ -782,14 +674,14 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                   {content?.hidden && (
                                     <Button
                                       size="sm"
-                                      onClick={(e: React.MouseEvent) => {
+                                      onClick={(e) => {
                                         e.stopPropagation()
                                         restorePost(firstReport)
                                       }}
-                                      className="bg-green-600 hover:bg-green-700 text-white text-[10px] sm:text-xs px-2 py-1.5 h-auto"
+                                      className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm h-8 sm:h-9"
                                     >
-                                      <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
-                                      <span className="hidden sm:inline">Restaurar</span>
+                                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                      Restaurar
                                     </Button>
                                   )}
                                   
@@ -797,15 +689,16 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                                   {pendingReports > 0 && (
                                     <Button
                                       size="sm"
-                                      onClick={(e: React.MouseEvent) => {
+                                      onClick={(e) => {
                                         e.stopPropagation()
                                         contentReports.forEach(r => updateReportStatus(r.id, 'reviewed'))
                                       }}
                                       variant="outline"
-                                      className="text-[10px] sm:text-xs px-2 py-1.5 h-auto"
+                                      className="text-xs sm:text-sm h-8 sm:h-9"
                                     >
-                                      <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1" />
-                                      <span className="hidden sm:inline">Revisado</span>
+                                      <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                                      <span className="hidden sm:inline">Marcar Revisado</span>
+                                      <span className="sm:hidden">Revisado</span>
                                     </Button>
                                   )}
                                 </div>
@@ -820,31 +713,31 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
               </ScrollArea>
             </TabsContent>
             
-            <TabsContent value="log" className="flex-1 flex flex-col overflow-hidden">
-              <ScrollArea className="flex-1 pr-2 sm:pr-4">
+            <TabsContent value="log" className="flex-1 flex flex-col mt-2 sm:mt-4 min-h-0">
+              <ScrollArea className="flex-1 pr-2 sm:pr-4 -mr-2 sm:-mr-4">
                 {moderationLog.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-32 text-center px-4">
                     <History className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mb-2" />
-                    <p className="text-sm sm:text-base text-gray-500">No hay historial de moderación</p>
+                    <p className="text-sm sm:text-base text-gray-500">No hay historial</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 pb-2">
+                  <div className="space-y-2 pr-2">
                     {moderationLog.map((log) => (
                       <Card key={log.id} className="border-l-4 border-l-blue-500">
-                        <CardContent className="pt-2.5 sm:pt-3 px-3 sm:px-4 pb-2.5 sm:pb-3">
-                          <div className="flex items-start justify-between gap-2">
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex items-start justify-between gap-2 sm:gap-3">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                              <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
                                 <span className="text-xs sm:text-sm">{getActionLabel(log.action)}</span>
                                 {log.contentType && (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                  <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0.5">
                                     {getContentTypeLabel(log.contentType)}
                                   </Badge>
                                 )}
                               </div>
                               
                               {log.contentTitle && (
-                                <p className="text-[11px] sm:text-xs text-gray-700 mb-1 line-clamp-1 break-words">
+                                <p className="text-[11px] sm:text-xs text-gray-700 mb-1 line-clamp-2">
                                   "{log.contentTitle}"
                                 </p>
                               )}
@@ -856,15 +749,22 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                               )}
                               
                               {log.reason && (
-                                <p className="text-[11px] sm:text-xs text-gray-600 mb-1 line-clamp-2 break-words">
+                                <p className="text-[11px] sm:text-xs text-gray-600 mb-1 line-clamp-1">
                                   Razón: {log.reason}
                                 </p>
                               )}
                               
-                              <div className="flex items-center gap-1.5 text-[10px] text-gray-500 flex-wrap">
+                              <div className="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] text-gray-500 flex-wrap">
                                 <span className="truncate">Por: {log.performedByName}</span>
                                 <span className="hidden sm:inline">•</span>
-                                <span className="text-[9px] sm:text-[10px]">{new Date(log.performedAt).toLocaleString('es-GT')}</span>
+                                <span className="text-[8px] sm:text-[10px]">
+                                  {new Date(log.performedAt).toLocaleString('es-GT', { 
+                                    day: '2-digit', 
+                                    month: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -878,26 +778,24 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
             
             {/* Moderators Tab - Admin Only */}
             {isAdmin && (
-              <TabsContent value="moderators" className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-hidden">
-                  {isLoadingUsers ? (
-                    <div className="flex items-center justify-center h-32">
-                      <div className="text-sm sm:text-base text-gray-500">Cargando usuarios...</div>
-                    </div>
-                  ) : users.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-32 text-center px-4">
-                      <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mb-2" />
-                      <p className="text-sm sm:text-base text-gray-500">No hay usuarios</p>
-                    </div>
-                  ) : (
-                    <UserManagement
-                      users={users}
-                      currentUserProfile={userProfile}
-                      token={token}
-                      onUserUpdated={fetchUsers}
-                    />
-                  )}
-                </div>
+              <TabsContent value="moderators" className="flex-1 flex flex-col mt-2 sm:mt-4 min-h-0">
+                {isLoadingUsers ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="text-sm sm:text-base text-gray-500">Cargando usuarios...</div>
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-32 text-center px-4">
+                    <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mb-2" />
+                    <p className="text-sm sm:text-base text-gray-500">No hay usuarios</p>
+                  </div>
+                ) : (
+                  <UserManagement
+                    users={users}
+                    currentUserProfile={userProfile}
+                    token={token}
+                    onUserUpdated={fetchUsers}
+                  />
+                )}
               </TabsContent>
             )}
           </Tabs>
@@ -905,27 +803,27 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
       </Dialog>
       
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open: boolean) => setDeleteDialog({ open, report: null })}>
-        <AlertDialogContent>
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, report: null })}>
+        <AlertDialogContent className="w-[90vw] sm:w-full max-w-md p-4 sm:p-6">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Trash2 className="w-5 h-5 text-red-600" />
+            <AlertDialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0" />
               ¿Eliminar publicación?
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
+            <AlertDialogDescription className="space-y-2 text-xs sm:text-sm">
               <p>Esta acción es <strong>permanente</strong> y eliminará:</p>
-              <ul className="list-disc list-inside text-sm space-y-1">
+              <ul className="list-disc list-inside text-xs sm:text-sm space-y-1 pl-2">
                 <li>La publicación completa</li>
                 <li>Todos los comentarios</li>
                 <li>Todas las reacciones</li>
               </ul>
-              <p className="text-red-600 mt-2">
+              <p className="text-red-600 mt-2 text-xs sm:text-sm">
                 ⚠️ Esta acción no se puede deshacer
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto m-0">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (deleteDialog.report) {
@@ -933,7 +831,7 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                   setDeleteDialog({ open: false, report: null })
                 }
               }}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto m-0"
             >
               Sí, eliminar
             </AlertDialogAction>
@@ -942,36 +840,36 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
       </AlertDialog>
       
       {/* Ban Confirmation Dialog */}
-      <AlertDialog open={banDialog.open} onOpenChange={(open: boolean) => {
+      <AlertDialog open={banDialog.open} onOpenChange={(open) => {
         setBanDialog({ open, report: null })
         if (!open) setBanReason('')
       }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[90vw] sm:w-full max-w-md p-4 sm:p-6">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <UserX className="w-5 h-5 text-purple-600" />
-              ¿Banear usuario permanentemente?
+            <AlertDialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <UserX className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 flex-shrink-0" />
+              ¿Banear usuario?
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
+            <AlertDialogDescription className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <p>Esta acción baneará al usuario de forma <strong>permanente</strong>.</p>
-              <p className="text-red-600">
-                ⚠️ El usuario no podrá acceder a la aplicación hasta que sea desbaneado por un admin.
+              <p className="text-red-600 text-xs sm:text-sm">
+                ⚠️ No podrá acceder hasta que un admin lo desbanee.
               </p>
-              <div className="mt-3">
-                <label className="text-sm text-gray-700 block mb-2">
+              <div className="mt-2 sm:mt-3">
+                <label className="text-xs sm:text-sm text-gray-700 block mb-2">
                   Razón del baneo (obligatorio):
                 </label>
                 <Textarea
                   value={banReason}
                   onChange={(e) => setBanReason(e.target.value)}
                   placeholder="Ej: Contenido ofensivo repetido, acoso, spam, etc."
-                  className="min-h-[80px]"
+                  className="min-h-[60px] sm:min-h-[80px] text-xs sm:text-sm"
                 />
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto m-0">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (banDialog.report) {
@@ -979,133 +877,9 @@ export function AdminReportsPanel({ open, onOpenChange, token, userProfile, onNa
                 }
               }}
               disabled={!banReason.trim()}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto m-0"
             >
               Sí, banear
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {/* Vet User Dialog */}
-      <AlertDialog open={vetDialog.open} onOpenChange={(open: boolean) => {
-        setVetDialog({ open, report: null })
-        if (!open) {
-          setVetReason('')
-          setVetDuration('7')
-        }
-      }}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Ban className="w-5 h-5 text-yellow-600" />
-              ¿Vetar usuario temporalmente?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <p>Esta acción vetará al usuario por un período específico.</p>
-              <p className="text-yellow-600">
-                ⚠️ El usuario no podrá publicar contenido durante el tiempo seleccionado.
-              </p>
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm text-gray-700 block mb-2">
-                    Duración del vetado:
-                  </label>
-                  <Select value={vetDuration} onValueChange={setVetDuration}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar duración" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 día</SelectItem>
-                      <SelectItem value="3">3 días</SelectItem>
-                      <SelectItem value="7">7 días (1 semana)</SelectItem>
-                      <SelectItem value="14">14 días (2 semanas)</SelectItem>
-                      <SelectItem value="30">30 días (1 mes)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm text-gray-700 block mb-2">
-                    Razón del vetado (obligatorio):
-                  </label>
-                  <Textarea
-                    value={vetReason}
-                    onChange={(e) => setVetReason(e.target.value)}
-                    placeholder="Ej: Contenido inapropiado, incumplimiento de normas, etc."
-                    className="min-h-[80px]"
-                  />
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (vetDialog.report) {
-                  vetUser(vetDialog.report)
-                }
-              }}
-              disabled={!vetReason.trim()}
-              className="bg-yellow-600 hover:bg-yellow-700"
-            >
-              Sí, vetar por {vetDuration} días
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {/* Block User Dialog */}
-      <AlertDialog open={blockDialog.open} onOpenChange={(open: boolean) => {
-        setBlockDialog({ open, report: null })
-        if (!open) setBlockReason('')
-      }}>
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <UserX className="w-5 h-5 text-orange-600" />
-              ¿Bloquear usuario?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <p>Esta acción bloqueará al usuario <strong>indefinidamente</strong>.</p>
-              <p className="text-orange-600">
-                ⚠️ El usuario no podrá acceder hasta ser desbloqueado por un administrador.
-              </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-900">
-                  <strong>📝 Diferencias:</strong><br/>
-                  • <strong>Vetar:</strong> Suspensión temporal (1-30 días)<br/>
-                  • <strong>Bloquear:</strong> Suspensión indefinida<br/>
-                  • <strong>Banear:</strong> Eliminación permanente (solo admin)
-                </p>
-              </div>
-              <div className="mt-3">
-                <label className="text-sm text-gray-700 block mb-2">
-                  Razón del bloqueo (obligatorio):
-                </label>
-                <Textarea
-                  value={blockReason}
-                  onChange={(e) => setBlockReason(e.target.value)}
-                  placeholder="Ej: Violación grave de normas, comportamiento tóxico repetido, etc."
-                  className="min-h-[80px]"
-                />
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (blockDialog.report) {
-                  blockUser(blockDialog.report)
-                }
-              }}
-              disabled={!blockReason.trim()}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
-              Sí, bloquear
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

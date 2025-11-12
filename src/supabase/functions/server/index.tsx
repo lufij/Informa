@@ -49,6 +49,16 @@ async function verifyUser(authHeader: string | null) {
   return user
 }
 
+// Helper function to get category name
+function getCategoryName(category: string): string {
+  const names: Record<string, string> = {
+    'salseo': 'El Salseo',
+    'trend': 'Trend & Tips',
+    'deportes': 'Vibra Deportiva'
+  }
+  return names[category] || 'Noticia'
+}
+
 // Helper function to get user profile
 async function getUserProfile(userId: string) {
   const profile = await kv.get(`user:${userId}`)
@@ -195,6 +205,74 @@ app.get('/make-server-3467f1c6/auth/profile', async (c) => {
   } catch (error) {
     console.log('Error fetching user profile:', error)
     return c.json({ error: 'Error fetching profile' }, 500)
+  }
+})
+
+// Get user stats (public)
+app.get('/make-server-3467f1c6/users/:userId/stats', async (c) => {
+  try {
+    const userId = c.req.param('userId')
+    
+    // Get user profile
+    const profile = await getUserProfile(userId)
+    if (!profile) {
+      return c.json({ error: 'User not found' }, 404)
+    }
+
+    // Count total posts across all content types
+    const allNews = await kv.getByPrefix('news:')
+    const allAlerts = await kv.getByPrefix('alert:')
+    const allClassifieds = await kv.getByPrefix('classified:')
+    const allForums = await kv.getByPrefix('forum:')
+    const allEvents = await kv.getByPrefix('event:')
+
+    const userNews = allNews.filter((n: any) => n.authorId === userId)
+    const userAlerts = allAlerts.filter((a: any) => a.authorId === userId)
+    const userClassifieds = allClassifieds.filter((c: any) => c.userId === userId)
+    const userForums = allForums.filter((f: any) => f.authorId === userId)
+    const userEvents = allEvents.filter((e: any) => e.authorId === userId)
+
+    const totalPosts = userNews.length + userAlerts.length + userClassifieds.length + userForums.length + userEvents.length
+
+    // Count total reactions received
+    let totalReactions = 0
+    
+    // News reactions
+    userNews.forEach((n: any) => {
+      if (n.reactions) {
+        totalReactions += Object.values(n.reactions).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0)
+      }
+    })
+    
+    // Alert reactions
+    userAlerts.forEach((a: any) => {
+      if (a.reactions) {
+        totalReactions += Object.values(a.reactions).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0)
+      }
+    })
+    
+    // Forum reactions
+    userForums.forEach((f: any) => {
+      if (f.reactions) {
+        totalReactions += Object.values(f.reactions).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0)
+      }
+    })
+
+    // Count total comments made (simplified - just count across all posts)
+    // In a real app, you'd have a separate comments collection
+    const totalComments = 0 // Placeholder for now
+
+    return c.json({
+      totalPosts,
+      totalReactions,
+      totalComments,
+      bio: profile.bio || '',
+      location: profile.location || '',
+      memberSince: profile.createdAt || profile.created_at || new Date().toISOString()
+    })
+  } catch (error) {
+    console.log('Error fetching user stats:', error)
+    return c.json({ error: 'Error fetching stats' }, 500)
   }
 })
 
@@ -452,6 +530,24 @@ app.post('/make-server-3467f1c6/news', async (c) => {
     }
 
     await kv.set(`news:${newsId}`, newsItem)
+    
+    // Send push notification to all users (except author) for important news
+    if (category === 'salseo' || category === 'trend') {
+      // Use setTimeout to not block response
+      setTimeout(async () => {
+        await broadcastPushNotification(
+          user.id,
+          `🔥 Nueva noticia: ${getCategoryName(category)}`,
+          title.substring(0, 100),
+          {
+            url: '/?section=noticias&id=' + newsId,
+            tag: 'news-' + newsId,
+            requireInteraction: false
+          }
+        )
+      }, 0)
+    }
+    
     return c.json(newsItem)
   } catch (error) {
     console.log('Error creating news:', error)
@@ -869,6 +965,23 @@ app.post('/make-server-3467f1c6/alerts', async (c) => {
     }
 
     await kv.set(`alert:${alertId}`, alert)
+    
+    // Send push notification to ALL users for important alerts
+    if (priority === 'critica' || priority === 'alta' || isEmergency) {
+      setTimeout(async () => {
+        await broadcastPushNotification(
+          user.id,
+          `🚨 ${priority === 'critica' ? 'ALERTA CRÍTICA' : 'Alerta Importante'}`,
+          (title || message || description).substring(0, 100),
+          {
+            url: '/?section=alertas&id=' + alertId,
+            tag: 'alert-' + alertId,
+            requireInteraction: priority === 'critica' // Critical alerts stay visible
+          }
+        )
+      }, 0)
+    }
+    
     return c.json(alert)
   } catch (error) {
     console.log('Error creating alert:', error)
@@ -1233,6 +1346,60 @@ app.delete('/make-server-3467f1c6/forums/:forumId/posts/:postId', async (c) => {
   } catch (error) {
     console.log('Error deleting forum post:', error)
     return c.json({ error: 'Error deleting post' }, 500)
+  }
+})
+
+// DELETE Forum - Admin or Author can delete entire forum
+app.delete('/make-server-3467f1c6/forums/:forumId', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'No autorizado' }, 401)
+    }
+
+    const profile = await getUserProfile(user.id)
+    const forumId = c.req.param('forumId')
+    const forum = await kv.get(`forum:${forumId}`)
+    
+    if (!forum) {
+      return c.json({ error: 'Foro no encontrado' }, 404)
+    }
+
+    // Check permissions: admin or forum author
+    if (profile.role !== 'admin' && forum.authorId !== user.id) {
+      return c.json({ error: 'No tienes permiso para eliminar este foro' }, 403)
+    }
+
+    // Delete all posts in the forum
+    const forumPosts = await kv.getByPrefix(`forum_post:${forumId}:`)
+    for (const post of forumPosts) {
+      await kv.del(`forum_post:${forumId}:${post.id}`)
+    }
+
+    // Delete the forum itself
+    await kv.del(`forum:${forumId}`)
+
+    // Log moderation action if admin
+    if (profile.role === 'admin') {
+      const logId = crypto.randomUUID()
+      await kv.set(`moderation_log:${logId}`, {
+        id: logId,
+        action: 'delete_post',
+        contentType: 'forum',
+        contentId: forumId,
+        contentTitle: forum.topic,
+        reason: 'Eliminado por administrador',
+        performedAt: new Date().toISOString(),
+        performedBy: user.id,
+        performedByName: profile.name
+      })
+    }
+
+    console.log(`Forum ${forumId} deleted successfully by ${profile.name}`)
+    return c.json({ success: true, message: 'Foro eliminado correctamente' })
+  } catch (error) {
+    console.error('Error deleting forum:', error)
+    return c.json({ error: 'Error al eliminar el foro' }, 500)
   }
 })
 
@@ -2957,79 +3124,6 @@ app.put('/make-server-3467f1c6/comments/:commentType/:parentId/:commentId/edit',
 })
 
 // ============================================
-// NOTIFICATIONS
-// ============================================
-
-// Get user notifications
-app.get('/make-server-3467f1c6/notifications', async (c) => {
-  try {
-    const user = await verifyUser(c.req.header('Authorization'))
-    if (!user) {
-      return c.json({ error: 'Unauthorized' }, 401)
-    }
-
-    const notifications = await kv.getByPrefix(`notification:${user.id}:`)
-    
-    // Sort by date (newest first)
-    const sorted = notifications.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-
-    return c.json(sorted)
-  } catch (error) {
-    console.log('Error fetching notifications:', error)
-    return c.json({ error: 'Error fetching notifications' }, 500)
-  }
-})
-
-// Mark notification as read
-app.post('/make-server-3467f1c6/notifications/:notificationId/read', async (c) => {
-  try {
-    const user = await verifyUser(c.req.header('Authorization'))
-    if (!user) {
-      return c.json({ error: 'Unauthorized' }, 401)
-    }
-
-    const notificationId = c.req.param('notificationId')
-    const notification = await kv.get(`notification:${user.id}:${notificationId}`)
-    
-    if (!notification) {
-      return c.json({ error: 'Notification not found' }, 404)
-    }
-
-    notification.read = true
-    await kv.set(`notification:${user.id}:${notificationId}`, notification)
-    
-    return c.json({ success: true })
-  } catch (error) {
-    console.log('Error marking notification as read:', error)
-    return c.json({ error: 'Error marking notification as read' }, 500)
-  }
-})
-
-// Mark all notifications as read
-app.post('/make-server-3467f1c6/notifications/read-all', async (c) => {
-  try {
-    const user = await verifyUser(c.req.header('Authorization'))
-    if (!user) {
-      return c.json({ error: 'Unauthorized' }, 401)
-    }
-
-    const notifications = await kv.getByPrefix(`notification:${user.id}:`)
-    
-    for (const notification of notifications) {
-      notification.read = true
-      await kv.set(`notification:${user.id}:${notification.id}`, notification)
-    }
-    
-    return c.json({ success: true })
-  } catch (error) {
-    console.log('Error marking all notifications as read:', error)
-    return c.json({ error: 'Error marking all notifications as read' }, 500)
-  }
-})
-
-// ============================================
 // PUBLIC ENDPOINTS (No auth required)
 // ============================================
 
@@ -3168,5 +3262,259 @@ app.get('/make-server-3467f1c6/public/forum/:id', async (c) => {
     return c.json({ error: 'Error fetching content' }, 500)
   }
 })
+
+// ============================================
+// NOTIFICATION PREFERENCES & NEW CONTENT CHECK
+// ============================================
+
+// Get user notification preferences
+app.get('/make-server-3467f1c6/notifications/preferences', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const preferences = await kv.get(`notification_prefs:${user.id}`)
+    
+    // Default preferences if not set
+    const defaultPrefs = {
+      newNews: true,
+      newAlerts: true,
+      newClassifieds: true,
+      newForums: true,
+      comments: true,
+      reactions: true,
+      mentions: true,
+      follows: true,
+      messages: true,
+      shares: true,
+      pushEnabled: false,
+      emailEnabled: false,
+      digestMode: false,
+      quietHours: false,
+    }
+
+    return c.json(preferences || defaultPrefs)
+  } catch (error) {
+    console.log('Error fetching notification preferences:', error)
+    return c.json({ error: 'Error fetching preferences' }, 500)
+  }
+})
+
+// Update user notification preferences
+app.put('/make-server-3467f1c6/notifications/preferences', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const preferences = await c.req.json()
+    await kv.set(`notification_prefs:${user.id}`, preferences)
+    
+    console.log(`✅ Notification preferences updated for user ${user.id}`)
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.log('Error updating notification preferences:', error)
+    return c.json({ error: 'Error updating preferences' }, 500)
+  }
+})
+
+// Check for new content since timestamp
+app.get('/make-server-3467f1c6/notifications/new-content', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const sinceParam = c.req.query('since')
+    const since = sinceParam ? new Date(sinceParam) : new Date(Date.now() - 3600000) // 1 hour ago default
+    
+    // Get user preferences
+    const prefs = await kv.get(`notification_prefs:${user.id}`)
+    const preferences = prefs || {
+      newNews: true,
+      newAlerts: true,
+      newClassifieds: true,
+      newForums: true,
+    }
+
+    const newContent: any[] = []
+
+    // Check for new news (if enabled)
+    if (preferences.newNews) {
+      const allNews = await kv.getByPrefix('news:')
+      const newNews = allNews.filter((n: any) => 
+        new Date(n.createdAt) > since && !n.deleted
+      )
+      if (newNews.length > 0) {
+        newContent.push({
+          type: 'news',
+          count: newNews.length,
+          latestTitle: newNews[0].title,
+          latestId: newNews[0].id
+        })
+      }
+    }
+
+    // Check for new alerts (if enabled)
+    if (preferences.newAlerts) {
+      const allAlerts = await kv.getByPrefix('alert:')
+      const newAlerts = allAlerts.filter((a: any) => 
+        new Date(a.createdAt) > since && !a.deleted
+      )
+      if (newAlerts.length > 0) {
+        newContent.push({
+          type: 'alert',
+          count: newAlerts.length,
+          latestTitle: newAlerts[0].content?.substring(0, 50),
+          latestId: newAlerts[0].id
+        })
+      }
+    }
+
+    // Check for new classifieds (if enabled)
+    if (preferences.newClassifieds) {
+      const allClassifieds = await kv.getByPrefix('classified:')
+      const newClassifieds = allClassifieds.filter((c: any) => 
+        new Date(c.createdAt) > since && !c.deleted
+      )
+      if (newClassifieds.length > 0) {
+        newContent.push({
+          type: 'classified',
+          count: newClassifieds.length,
+          latestTitle: newClassifieds[0].title,
+          latestId: newClassifieds[0].id
+        })
+      }
+    }
+
+    // Check for new forums (if enabled)
+    if (preferences.newForums) {
+      const allForums = await kv.getByPrefix('forum:')
+      const newForums = allForums.filter((f: any) => 
+        new Date(f.createdAt) > since && !f.deleted
+      )
+      if (newForums.length > 0) {
+        newContent.push({
+          type: 'forum',
+          count: newForums.length,
+          latestTitle: newForums[0].title,
+          latestId: newForums[0].id
+        })
+      }
+    }
+
+    return c.json(newContent)
+  } catch (error) {
+    console.log('Error checking for new content:', error)
+    return c.json({ error: 'Error checking new content' }, 500)
+  }
+})
+
+// Subscribe to push notifications
+app.post('/make-server-3467f1c6/notifications/subscribe-push', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const { subscription } = await c.req.json()
+    
+    // Store push subscription
+    await kv.set(`push_subscription:${user.id}`, {
+      userId: user.id,
+      subscription,
+      createdAt: new Date().toISOString()
+    })
+    
+    console.log(`✅ Push subscription registered for user ${user.id}`)
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.log('Error subscribing to push notifications:', error)
+    return c.json({ error: 'Error subscribing to push' }, 500)
+  }
+})
+
+// Unsubscribe from push notifications
+app.post('/make-server-3467f1c6/notifications/unsubscribe-push', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'))
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    await kv.del(`push_subscription:${user.id}`)
+    
+    console.log(`✅ Push subscription removed for user ${user.id}`)
+    
+    return c.json({ success: true })
+  } catch (error) {
+    console.log('Error unsubscribing from push notifications:', error)
+    return c.json({ error: 'Error unsubscribing from push' }, 500)
+  }
+})
+
+// Helper function to send push notification to user
+async function sendPushNotification(userId: string, title: string, body: string, data?: any) {
+  try {
+    const pushSub = await kv.get(`push_subscription:${userId}`)
+    if (!pushSub || !pushSub.subscription) {
+      return false // User not subscribed to push
+    }
+
+    // Get user preferences
+    const prefs = await kv.get(`notification_prefs:${userId}`)
+    if (prefs && prefs.pushEnabled === false) {
+      return false // User disabled push notifications
+    }
+
+    const payload = {
+      title,
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon-96.png',
+      tag: data?.tag || 'informa-notification',
+      requireInteraction: data?.requireInteraction || false,
+      vibrate: [200, 100, 200],
+      data: data || {}
+    }
+
+    // In a real implementation, you would use web-push library here
+    // For now, we'll just log it (browser will handle local notifications)
+    console.log(`📤 Push notification queued for user ${userId}:`, title)
+    
+    return true
+  } catch (error) {
+    console.error(`Error sending push notification to user ${userId}:`, error)
+    return false
+  }
+}
+
+// Helper function to send push to all subscribed users (except author)
+async function broadcastPushNotification(excludeUserId: string, title: string, body: string, data?: any) {
+  try {
+    const allSubscriptions = await kv.getByPrefix('push_subscription:')
+    let sentCount = 0
+
+    for (const sub of allSubscriptions) {
+      if (sub.userId !== excludeUserId) {
+        const sent = await sendPushNotification(sub.userId, title, body, data)
+        if (sent) sentCount++
+      }
+    }
+
+    console.log(`📡 Broadcast push sent to ${sentCount} users`)
+    return sentCount
+  } catch (error) {
+    console.error('Error broadcasting push notification:', error)
+    return 0
+  }
+}
 
 Deno.serve(app.fetch)

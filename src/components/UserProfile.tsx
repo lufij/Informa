@@ -189,7 +189,7 @@ export function UserProfile({ open, onOpenChange, userId, currentUserToken, onNa
   const getPostTypeName = (type: string) => {
     switch (type) {
       case 'news':
-        return 'Noticia'
+        return 'Chisme'
       case 'alert':
         return 'Alerta'
       case 'classified':
