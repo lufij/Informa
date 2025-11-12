@@ -2,23 +2,26 @@
 
 ## ✅ Problema Resuelto
 
-**Problema:** En celulares Android, al presionar "Descargar" aparecía mensaje de Safari (iOS).
+**Problema Original:** En celulares Android, al presionar "Descargar" aparecía mensaje de Safari (iOS).
+**Problema Nuevo:** Usuario quiere que en Android NO muestre instrucciones, sino que se instale automáticamente.
 
-**Solución:** Se corrigió la detección de sistema operativo para mostrar instrucciones correctas según la plataforma.
+**Solución Final:** 
+- ✅ Si hay prompt disponible → Instalación automática
+- ✅ Si NO hay prompt → Botón oculto (sin instrucciones)
 
 ---
 
-## 📱 Cambios Realizados
+## 📱 Cambios Realizados (Actualizado)
 
 ### Archivo Modificado: `/App.tsx`
 
-**Función `handleInstallPWA()` - Líneas 143-189**
+**Función `handleInstallPWA()` - Líneas 143-157**
 
-#### ✅ Ahora (correcto):
+#### ✅ Implementación Final (sin instrucciones manuales):
 ```typescript
 const handleInstallPWA = async () => {
   if (deferredPrompt) {
-    // Android/Desktop con soporte beforeinstallprompt - instalar directamente
+    // Instalar automáticamente con el prompt del navegador
     deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
     
@@ -30,34 +33,16 @@ const handleInstallPWA = async () => {
     
     setDeferredPrompt(null)
     setShowInstallBanner(false)
-  } else {
-    // Detectar el sistema operativo
-    const userAgent = window.navigator.userAgent.toLowerCase()
-    const isIOS = /iphone|ipad|ipod/.test(userAgent)
-    const isAndroid = /android/.test(userAgent)
-    
-    if (isIOS) {
-      // ✅ iOS - mostrar instrucciones de Safari
-      toast.info('📱 Instrucciones para instalar en iOS', {
-        description: 'En Safari: toca el botón Compartir (📤) y luego "Añadir a pantalla de inicio"',
-        duration: 8000
-      })
-    } else if (isAndroid) {
-      // ✅ Android sin prompt - mostrar instrucciones de Chrome
-      toast.info('🤖 Instrucciones para instalar en Android', {
-        description: 'En Chrome: toca el menú (⋮) arriba a la derecha y selecciona "Agregar a pantalla de inicio" o "Instalar app"',
-        duration: 8000
-      })
-    } else {
-      // ✅ Desktop o ya instalada
-      toast.info('💻 Instrucciones para instalar', {
-        description: 'En Chrome: haz clic en el ícono de instalación (⊕) en la barra de direcciones',
-        duration: 6000
-      })
-    }
   }
+  // Si no hay deferredPrompt, no hacer nada (el botón estará oculto)
 }
 ```
+
+**Cambios clave:**
+- ❌ Eliminada detección de Android/iOS
+- ❌ Eliminados mensajes de instrucciones manuales
+- ✅ Solo instala automáticamente si hay prompt
+- ✅ Si no hay prompt, no hace nada (botón estará oculto)
 
 ---
 
@@ -78,39 +63,13 @@ Click en "Agregar" → App instalada ✅
 ```
 Usuario presiona "Descargar"
     ↓
-Se detecta Android (userAgent)
+No hay prompt disponible
     ↓
-Toast muestra: "Instrucciones para instalar en Android"
+Botón "Descargar" se oculta
     ↓
-"En Chrome: toca el menú (⋮) > Agregar a pantalla de inicio"
+Usuario no ve instrucciones
     ↓
-Usuario sigue instrucciones manualmente ✅
-```
-
-### Escenario 3: iOS (Safari)
-```
-Usuario presiona "Descargar"
-    ↓
-Se detecta iOS (userAgent)
-    ↓
-Toast muestra: "Instrucciones para instalar en iOS"
-    ↓
-"En Safari: toca el botón Compartir (📤) > Añadir a pantalla de inicio"
-    ↓
-Usuario sigue instrucciones manualmente ✅
-```
-
-### Escenario 4: Desktop
-```
-Usuario hace click en "Descargar"
-    ↓
-Se detecta que no es móvil
-    ↓
-Toast muestra: "Instrucciones para instalar"
-    ↓
-"En Chrome: haz clic en el ícono de instalación (⊕) en la barra"
-    ↓
-Usuario hace click en ícono ⊕ ✅
+No se instala automáticamente
 ```
 
 ---
@@ -393,4 +352,4 @@ Ahora tu app **Informa** muestra instrucciones correctas según la plataforma:
 
 **Fecha de corrección:** Noviembre 2024  
 **Archivo modificado:** `/App.tsx`  
-**Líneas:** 143-189
+**Líneas:** 143-157

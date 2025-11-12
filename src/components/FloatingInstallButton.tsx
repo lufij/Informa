@@ -40,12 +40,14 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
     // - (User hasn't dismissed OR more than 1 day has passed since dismissal)
     if (!installed && (!dismissed || Date.now() - dismissedTime > oneDayMs)) {
       // On iOS, always show (they can't auto-install via prompt)
-      // On Android, show if we have the prompt OR after 2 seconds
       if (iOS) {
         setTimeout(() => setShowButton(true), 2000)
-      } else if (deferredPrompt) {
+      } 
+      // On Android, ONLY show if we have deferredPrompt (can auto-install)
+      else if (deferredPrompt) {
         setTimeout(() => setShowButton(true), 2000)
       }
+      // If Android but no deferredPrompt, don't show button
     }
   }, [deferredPrompt])
 
