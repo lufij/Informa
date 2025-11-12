@@ -1,18 +1,49 @@
 // Service Worker for Push Notifications - Informa
 // Maneja notificaciones push cuando la app está cerrada
 
-const CACHE_NAME = 'informa-v1'
+const CACHE_NAME = 'informa-v5.5.0'
+const CACHE_ASSETS = [
+  '/',
+  '/index.html',
+  '/icon-192.png',
+  '/icon-96.png',
+  '/manifest.json'
+]
 
 // Install event
 self.addEventListener('install', (event) => {
-  console.log('🔧 Service Worker instalado')
-  self.skipWaiting()
+  console.log('🔧 Service Worker v5.5.0 instalado')
+  
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('📦 Cache abierto:', CACHE_NAME)
+        return cache.addAll(CACHE_ASSETS)
+      })
+      .then(() => self.skipWaiting())
+  )
 })
 
 // Activate event
 self.addEventListener('activate', (event) => {
-  console.log('✅ Service Worker activado')
-  event.waitUntil(clients.claim())
+  console.log('✅ Service Worker v5.5.0 activado')
+  
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          // Eliminar cachés antiguos
+          if (cacheName !== CACHE_NAME) {
+            console.log('🗑️ Eliminando cache antiguo:', cacheName)
+            return caches.delete(cacheName)
+          }
+        })
+      )
+    }).then(() => {
+      console.log('✅ Cachés antiguos eliminados')
+      return clients.claim()
+    })
+  )
 })
 
 // Push notification received

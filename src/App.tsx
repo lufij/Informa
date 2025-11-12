@@ -84,85 +84,7 @@ export default function App() {
   // PWA installation check - MUST be called at top level
   const isAppInstalled = useAppInstalled()
 
-  useEffect(() => {
-    // Update page title
-    document.title = 'Informa - Lo que está pasando ahora'
-    
-    // Check for deep links FIRST (before checking session)
-    const params = new URLSearchParams(window.location.search)
-    const view = params.get('view')
-    const id = params.get('id')
-    
-    if (view && id && ['news', 'alert', 'classified', 'forum'].includes(view)) {
-      setDeepLinkView(view as any)
-      setDeepLinkId(id)
-      setShowInstallBanner(true)
-    }
-    
-    // Check existing session (critical)
-    checkExistingSession()
-    
-    // Diferir llamadas no críticas
-    setTimeout(() => {
-      migrateFirefighterUser()
-    }, 2000) // Ejecutar después de 2 segundos
-    
-    // Listen for PWA install prompt
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-    }
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall)
-    
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
-    }
-  }, [])
-  
-  // Handle deep link navigation when user is already authenticated
-  useEffect(() => {
-    if (isAuthenticated && deepLinkView && deepLinkId) {
-      const sectionMap = {
-        news: 'news',
-        alert: 'alerts',
-        classified: 'classifieds',
-        forum: 'forums'
-      }
-      setActiveTab(sectionMap[deepLinkView] as any)
-      setHighlightedItemId(deepLinkId)
-      setDeepLinkView(null)
-      setDeepLinkId(null)
-      setShowInstallBanner(false)
-      
-      toast.success('Te llevamos al contenido 👋', {
-        duration: 2000
-      })
-    }
-  }, [isAuthenticated, deepLinkView, deepLinkId])
-  
-  const handleInstallPWA = async () => {
-    if (deferredPrompt) {
-      // Instalar automáticamente con el prompt del navegador
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      
-      if (outcome === 'accepted') {
-        toast.success('¡App instalada! 🎉', {
-          description: 'Ahora puedes acceder desde tu pantalla de inicio'
-        })
-      }
-      
-      setDeferredPrompt(null)
-      setShowInstallBanner(false)
-    }
-    // Si no hay deferredPrompt, no hacer nada (el botón estará oculto)
-  }
-  
-  const handleDeepLinkLogin = () => {
-    setShowAuthDialog(true)
-    // After login, they'll be redirected to the content
-  }
-
+  // Function definitions MUST come before useEffect calls
   const migrateFirefighterUser = async () => {
     // Verificar si ya se ejecutó usando localStorage
     const migrationKey = 'firefighter_migration_completed'
@@ -190,30 +112,6 @@ export default function App() {
       // No marcar como completado si falla
     }
   }
-
-  // Poll for unread notifications AND new content (diferido)
-  useEffect(() => {
-    if (isAuthenticated && token) {
-      // Diferir primera carga de notificaciones 1 segundo
-      const initialTimeout = setTimeout(() => {
-        fetchUnreadCount()
-        checkNewContent()
-      }, 1000)
-      
-      // Polling cada 30 segundos para notificaciones y contenido nuevo
-      const interval = setInterval(() => {
-        if (navigator.onLine) {
-          fetchUnreadCount()
-          checkNewContent()
-        }
-      }, 30000)
-      
-      return () => {
-        clearTimeout(initialTimeout)
-        clearInterval(interval)
-      }
-    }
-  }, [isAuthenticated, token])
 
   const fetchUnreadCount = async () => {
     if (!token) return
@@ -309,10 +207,6 @@ export default function App() {
           throw new Error('Profile fetch failed')
         })
         .then(profile => {
-          console.log('✅ Perfil recibido:', profile)
-          console.log('📱 Teléfono:', profile.phone)
-          console.log('👤 Rol:', profile.role)
-          
           setUserProfile(profile)
           
           // Show admin welcome for main administrator
@@ -351,12 +245,30 @@ export default function App() {
     }
   }
 
+  const handleInstallPWA = async () => {
+    if (deferredPrompt) {
+      // Instalar automáticamente con el prompt del navegador
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      
+      if (outcome === 'accepted') {
+        toast.success('¡App instalada! 🎉', {
+          description: 'Ahora puedes acceder desde tu pantalla de inicio'
+        })
+      }
+      
+      setDeferredPrompt(null)
+      setShowInstallBanner(false)
+    }
+    // Si no hay deferredPrompt, no hacer nada (el botón estará oculto)
+  }
+  
+  const handleDeepLinkLogin = () => {
+    setShowAuthDialog(true)
+    // After login, they'll be redirected to the content
+  }
+
   const handleLoginSuccess = (accessToken: string, profile: any) => {
-    console.log('🔐 Login exitoso!')
-    console.log('✅ Perfil recibido:', profile)
-    console.log('📱 Teléfono:', profile.phone)
-    console.log('👤 Rol:', profile.role)
-    
     setToken(accessToken)
     setUserProfile(profile)
     setIsAuthenticated(true)
@@ -428,6 +340,71 @@ export default function App() {
     setUserProfile(null)
     setIsAuthenticated(false)
   }
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setShowInstallBanner(true)
+    }
+    
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+    
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
+    }
+  }, [])
+  
+  // Check for existing session on mount
+  useEffect(() => {
+    checkExistingSession()
+    migrateFirefighterUser()
+  }, [])
+  
+  // Handle deep link navigation when user is already authenticated
+  useEffect(() => {
+    if (isAuthenticated && deepLinkView && deepLinkId) {
+      const sectionMap = {
+        news: 'news',
+        alert: 'alerts',
+        classified: 'classifieds',
+        forum: 'forums'
+      }
+      setActiveTab(sectionMap[deepLinkView] as any)
+      setHighlightedItemId(deepLinkId)
+      setDeepLinkView(null)
+      setDeepLinkId(null)
+      setShowInstallBanner(false)
+      
+      toast.success('Te llevamos al contenido 👋', {
+        duration: 2000
+      })
+    }
+  }, [isAuthenticated, deepLinkView, deepLinkId])
+  
+  // Poll for unread notifications AND new content (diferido)
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      // Diferir primera carga de notificaciones 1 segundo
+      const initialTimeout = setTimeout(() => {
+        fetchUnreadCount()
+        checkNewContent()
+      }, 1000)
+      
+      // Polling cada 30 segundos para notificaciones y contenido nuevo
+      const interval = setInterval(() => {
+        if (navigator.onLine) {
+          fetchUnreadCount()
+          checkNewContent()
+        }
+      }, 30000)
+      
+      return () => {
+        clearTimeout(initialTimeout)
+        clearInterval(interval)
+      }
+    }
+  }, [isAuthenticated, token])
 
   // Componente de carga mejorado
   const LoadingScreen = () => (
