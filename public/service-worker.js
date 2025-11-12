@@ -1,7 +1,7 @@
 // Service Worker para PWA con Push Notifications
-const CACHE_NAME = 'informa-v1'
-const API_CACHE = 'informa-api-v1'
-const RUNTIME_CACHE = 'informa-runtime-v1'
+const CACHE_NAME = 'informa-v5.3.0'
+const API_CACHE = 'informa-api-v5.3.0'
+const RUNTIME_CACHE = 'informa-runtime-v5.3.0'
 
 const currentCaches = [CACHE_NAME, API_CACHE, RUNTIME_CACHE]
 
