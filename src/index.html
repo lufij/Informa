@@ -186,32 +186,9 @@
       });
     }
     
-    // PWA Install Prompt
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      // Prevent the mini-infobar from appearing on mobile
-      e.preventDefault();
-      // Stash the event so it can be triggered later
-      deferredPrompt = e;
-      console.log('💾 App instalable detectada');
-      
-      // Show custom install button/banner after a delay
-      setTimeout(() => {
-        showInstallPromotion();
-      }, 3000);
-    });
-    
-    function showInstallPromotion() {
-      // You can trigger this from your React app
-      window.dispatchEvent(new CustomEvent('showInstallPrompt', { 
-        detail: { prompt: deferredPrompt } 
-      }));
-    }
-    
     // Track if app was launched from home screen
     window.addEventListener('appinstalled', () => {
       console.log('✅ App instalada en el dispositivo');
-      deferredPrompt = null;
       
       // Analytics or celebration
       if (window.gtag) {

@@ -1,3 +1,4 @@
+import { PWADiagnostics } from './components/PWADiagnostics'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { UserAvatar } from './components/UserAvatar'
 import { ContentSkeleton } from './components/ContentSkeleton'
@@ -80,6 +81,7 @@ export default function App() {
     forums: 0,
     events: 0
   })
+  const [showPWADiagnostics, setShowPWADiagnostics] = useState(false)
 
   // PWA installation check - MUST be called at top level
   const isAppInstalled = useAppInstalled()
@@ -364,13 +366,33 @@ export default function App() {
   }
 
   useEffect(() => {
+    console.log('🔍 [DEBUG] Configurando listener de beforeinstallprompt...')
+    
     const handleBeforeInstall = (e: Event) => {
+      console.log('✅ [DEBUG] beforeinstallprompt SE DISPARÓ!')
       e.preventDefault()
       setDeferredPrompt(e)
       setShowInstallBanner(true)
     }
     
     window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+    
+    // Debug: verificar estado inicial
+    setTimeout(() => {
+      console.log('🔍 [DEBUG] Estado después de 3 segundos:')
+      console.log('  - deferredPrompt:', deferredPrompt ? 'SÍ EXISTE' : 'NO EXISTE (null)')
+      console.log('  - User Agent:', navigator.userAgent)
+      console.log('  - Display mode:', window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser')
+      console.log('  - HTTPS:', window.location.protocol === 'https:')
+      
+      if (!deferredPrompt) {
+        console.log('⚠️ [DEBUG] beforeinstallprompt NO se disparó. Posibles razones:')
+        console.log('  1. App ya instalada')
+        console.log('  2. Usuario rechazó antes (limpiar caché de Chrome)')
+        console.log('  3. No cumple criterios PWA')
+        console.log('  4. Navegador no compatible')
+      }
+    }, 3000)
     
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall)

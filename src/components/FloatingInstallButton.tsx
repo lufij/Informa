@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import { Download, X, Smartphone, Monitor, Apple, Share, MoreVertical, CheckCircle, Chrome } from 'lucide-react'
+import { PWADiagnostics } from './PWADiagnostics'
 import { Button } from './ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog'
-import { Download, X, Share, CheckCircle, Smartphone, Chrome, MoreVertical } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
 
 const logoCircular = 'https://img.icons8.com/fluency/96/news.png'
 
