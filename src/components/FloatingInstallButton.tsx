@@ -12,6 +12,22 @@ interface FloatingInstallButtonProps {
 }
 
 export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingInstallButtonProps) {
+  // Intento forzado de instalación automática
+  const forceInstall = () => {
+    // Intentar abrir el menú de instalación de Chrome
+    if (navigator.userAgent.includes('Chrome')) {
+      // Chrome no permite abrir el menú de instalación por código, pero podemos mostrar instrucciones y copiar la URL
+      try {
+        // Intentar abrir chrome://apps (no siempre funciona en móvil)
+        window.open('chrome://apps', '_blank')
+      } catch (e) {
+        // Si falla, mostrar instrucciones
+        setShowInstructions(true)
+      }
+    } else {
+      setShowInstructions(true)
+    }
+  }
   // Diagnóstico visual para el usuario
   const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [showButton, setShowButton] = useState(false)
@@ -131,7 +147,13 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
             <li>No cumple criterios PWA (HTTPS, manifest, service worker activos)</li>
             <li>Actualización reciente del navegador o sistema operativo</li>
           </ul>
-          <div className="flex gap-2 mt-4">
+          <div className="flex flex-col gap-2 mt-4">
+            <Button
+              onClick={forceInstall}
+              className="flex-1 bg-gradient-to-r from-green-600 to-pink-600 hover:from-green-700 hover:to-pink-700 text-white"
+            >
+              Forzar instalación automática
+            </Button>
             <Button
               onClick={() => setShowDiagnostics(false)}
               className="flex-1 bg-gradient-to-r from-yellow-600 to-pink-600 hover:from-yellow-700 hover:to-pink-700 text-white"
