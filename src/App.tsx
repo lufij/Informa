@@ -38,7 +38,7 @@ import { Toaster } from './components/ui/sonner'
 import { toast } from 'sonner'
 import { getSupabaseClient } from './utils/supabase/client'
 import { projectId, publicAnonKey } from './utils/supabase/info'
-import { Flame, Megaphone, ShoppingBag, MessageSquare, LogOut, Sparkles, TrendingUp, Eye, LogIn, UserPlus, Bell, Search, Mail, Bookmark, Rss, Shield, User, Menu } from 'lucide-react'
+import { Flame, Megaphone, ShoppingBag, MessageSquare, LogOut, Sparkles, TrendingUp, Eye, LogIn, UserPlus, Bell, Search, Mail, Bookmark, Rss, Shield, User, Menu, Download } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './components/ui/dropdown-menu'
 import logoCircular from 'figma:asset/159f250301c9fc78337e0c8aa784431ded1c39c8.png'
@@ -247,20 +247,42 @@ export default function App() {
 
   const handleInstallPWA = async () => {
     if (deferredPrompt) {
-      // Instalar automáticamente con el prompt del navegador
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      
-      if (outcome === 'accepted') {
-        toast.success('¡App instalada! 🎉', {
-          description: 'Ahora puedes acceder desde tu pantalla de inicio'
+      try {
+        // Mostrar el prompt de instalación nativo del navegador
+        deferredPrompt.prompt()
+        
+        // Esperar a que el usuario responda al prompt
+        const { outcome } = await deferredPrompt.userChoice
+        
+        if (outcome === 'accepted') {
+          toast.success('¡App instalada! 🎉', {
+            description: 'Informa se instaló correctamente. Búscala en tu pantalla de inicio.',
+            duration: 4000
+          })
+          
+          // Limpiar el prompt después de usarlo
+          setDeferredPrompt(null)
+          setShowInstallBanner(false)
+        } else {
+          toast.info('Instalación cancelada', {
+            description: 'Puedes instalar la app cuando quieras desde el botón flotante.',
+            duration: 3000
+          })
+        }
+      } catch (error) {
+        console.error('Error al instalar PWA:', error)
+        toast.error('No se pudo instalar', {
+          description: 'Intenta instalarlo manualmente desde el menú de tu navegador (⋮ > Instalar app)',
+          duration: 5000
         })
       }
-      
-      setDeferredPrompt(null)
-      setShowInstallBanner(false)
+    } else {
+      // Si no hay deferredPrompt, mostrar instrucciones
+      toast.info('Instalación manual', {
+        description: 'Toca el menú (⋮) de tu navegador y selecciona "Instalar aplicación"',
+        duration: 5000
+      })
     }
-    // Si no hay deferredPrompt, no hacer nada (el botón estará oculto)
   }
   
   const handleDeepLinkLogin = () => {
@@ -660,6 +682,35 @@ export default function App() {
 
       {/* Main Content */}
       <main className="w-full px-3 sm:px-4 py-4 sm:py-6 max-w-4xl mx-auto">
+        {/* Install Banner for Guest Users - ALWAYS VISIBLE */}
+        {!isAuthenticated && !isAppInstalled && (
+          <div className="mb-6 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 rounded-xl p-4 shadow-2xl border-2 border-white/20 animate-in slide-in-from-top duration-500">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg">
+                  <Download className="w-8 h-8 text-purple-600" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-white font-bold text-lg mb-1">
+                  ¡Descarga Informa! 📱
+                </h3>
+                <p className="text-white/90 text-sm">
+                  Instala la app para acceder más rápido y recibir notificaciones
+                </p>
+              </div>
+              <Button
+                onClick={handleInstallPWA}
+                size="sm"
+                className="bg-white text-purple-600 hover:bg-white/90 font-bold shadow-lg flex-shrink-0"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Instalar
+              </Button>
+            </div>
+          </div>
+        )}
+        
         {/* Show Public Content View if deep link exists and user is not authenticated */}
         {deepLinkView && deepLinkId && !isAuthenticated ? (
           <Suspense fallback={<SuspenseFallback />}>

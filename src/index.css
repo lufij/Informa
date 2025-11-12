@@ -1218,6 +1218,10 @@
     width: calc(var(--spacing) * 12);
   }
 
+  .w-14 {
+    width: calc(var(--spacing) * 14);
+  }
+
   .w-16 {
     width: calc(var(--spacing) * 16);
   }
@@ -3756,6 +3760,10 @@
 
   .slide-in-from-bottom {
     --tw-enter-translate-y: 100%;
+  }
+
+  .slide-in-from-top {
+    --tw-enter-translate-y: -100%;
   }
 
   .zoom-in-95 {
