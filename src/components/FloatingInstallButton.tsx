@@ -28,8 +28,6 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
       setShowInstructions(true)
     }
   }
-  // Diagnóstico visual para el usuario
-  const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [showButton, setShowButton] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [isAndroid, setIsAndroid] = useState(false)
@@ -74,10 +72,7 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
 
   const handleClick = () => {
     // Diagnóstico: si no hay deferredPrompt, mostrar diagnóstico
-    if (!deferredPrompt && isAndroid && !isIOS) {
-      setShowDiagnostics(true)
-      return
-    }
+    // Ya no mostrar diagnóstico, solo instrucciones si no hay prompt
 
     // iOS/Safari: mostrar instrucciones
     if (isIOS) {
@@ -131,38 +126,6 @@ export function FloatingInstallButton({ deferredPrompt, onInstall }: FloatingIns
       </div>
 
       {/* Diagnóstico visual para Android si no hay deferredPrompt */}
-      <Dialog open={showDiagnostics} onOpenChange={setShowDiagnostics}>
-        <DialogContent className="max-w-md bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50 border-2 border-yellow-200">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl text-yellow-700">Diagnóstico de instalación PWA</DialogTitle>
-            <DialogDescription className="text-center text-gray-700">
-              El navegador no permite instalar automáticamente la app.<br />
-              <span className="font-bold">Posibles causas:</span>
-            </DialogDescription>
-          </DialogHeader>
-          <ul className="list-disc pl-6 text-gray-700 text-sm py-2">
-            <li>La app ya está instalada (verifica en tu pantalla de inicio)</li>
-            <li>El navegador no soporta instalación automática (usa Chrome, Edge, Brave, Opera, Samsung Internet)</li>
-            <li>El usuario rechazó la instalación anteriormente (borra caché y datos del navegador)</li>
-            <li>No cumple criterios PWA (HTTPS, manifest, service worker activos)</li>
-            <li>Actualización reciente del navegador o sistema operativo</li>
-          </ul>
-          <div className="flex flex-col gap-2 mt-4">
-            <Button
-              onClick={forceInstall}
-              className="flex-1 bg-gradient-to-r from-green-600 to-pink-600 hover:from-green-700 hover:to-pink-700 text-white"
-            >
-              Forzar instalación automática
-            </Button>
-            <Button
-              onClick={() => setShowDiagnostics(false)}
-              className="flex-1 bg-gradient-to-r from-yellow-600 to-pink-600 hover:from-yellow-700 hover:to-pink-700 text-white"
-            >
-              Entendido
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Installation Instructions Dialog - iOS y Android */}
       <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
