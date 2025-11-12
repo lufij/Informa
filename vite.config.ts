@@ -53,6 +53,7 @@
     build: {
       target: 'esnext',
       outDir: 'build',
+      chunkSizeWarningLimit: 2000, // Ajusta el límite a 2000 kB para ocultar el warning
     },
     server: {
       port: 3000,
